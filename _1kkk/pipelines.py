@@ -6,11 +6,17 @@
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 import re
 import os
-import urllib.request#python3
+#import requests
 import threading
 import queue
 import time
 import sqlite3
+import struct
+import pickle
+import shutil
+#from libs import ebooklib
+from _1kkk.libs.ebooklib.ebooklib import epub
+from _1kkk.libs.kcc.kcc.comic2ebook import createKVBook
 
 
 class KkkPipeline(object):
@@ -22,14 +28,17 @@ class KkkPipeline(object):
         并且根据user表中定义的用户，将数据推送至该用户的kindle
     """
     def process_item(self, item, spider):
-        print("into pipe")
+        """
+            v1.0为每一个漫画一个线程，则会遇到多个线程同时下载的情况。
+                在小服务器的情况下会导致内存溢出的bug。
+            v1.1改造为线程池根据服务器情况动态调整线程池的最大处理上线，来防止生成epub时导致内存溢出。
+        """
         man=downloadImage(item)
         man.start()
         return item
 
 
 class downloadImage(threading.Thread):
-
     def __init__(self,items):
         self.item=items
         self.db=MangaDao()
@@ -53,12 +62,66 @@ class downloadImage(threading.Thread):
             mPage.manid=manga.id
             mPage.kkkid=ci.id
             mPage.name=ci.chid
+            mPage.isbuckup=0
+            mPage.ispush=0
             filepath="./tmp/image/%s/%s/"%(mPage.manid,mPage.kkkid)
-            if os.path.exists(filepath) != True:
-                os.makedirs(filepath)
-            for i in ci.page:
-                urllib.request.urlretrieve(i.imageurl, "./tmp/image/%s/%s/%s.jpg"%(mPage.manid,mPage.kkkid,i.id))
-            self.db.insertMangaPage(mPage)
+            #生成epub
+            mPage.size=self.createEpub(manga,ci,filepath)
+            #生成mobi
+            self.compressionMobi("./tmp/image/%s/"%(mPage.manid),ci)
+            #注册该漫画已完成下载,入库
+#            self.db.insertMangaPage(mPage)
+            #开始备份云盘与推送到kindle
+
+
+    def createEpub(self,manga,ci,path):
+        #路径
+        epubpath="./tmp/image/%s/%s.epub"%(manga.id,ci.id)
+        title="%s[%s][%s][%s]"%(manga.name,ci.chid,manga.author,manga.type)
+        createKVBook(path,epubpath,title)
+        shutil.rmtree(path)
+        return os.path.getsize(epubpath)
+#        book = epub.EpubBook()
+#        #绝对ID
+#        book.set_identifier(ci.id)
+#        #书籍名称
+#        book.set_title("%s[%s][%s][%s]"%(manga.name,ci.chid,manga.author,manga.type))
+#        #语言
+#        book.set_language('en')
+#        #作者
+#        book.add_author('talkxin')
+#        book.spine=[]
+#        #封面
+#        book.set_cover("image.jpg",open('%s/1.jpg'%path, 'rb').read())
+#        toc=[]
+#        for i in range(1,len(ci.page)+1):
+#            itm = epub.EpubImage()
+#            itm.file_name ="%s.jpg"%i
+#            itm.content=open('%s/%s.jpg'%(path,i), 'rb').read()
+#            book.add_item(itm)
+#            toc.append(epub.Link("%s.jpg"%i,"p%s"%i,"p%s"%i))
+#            book.spine.append(itm)
+#            os.remove('%s/%s.jpg'%(path,i))
+#        #目录
+#        book.toc = (toc)
+#        book.add_item(epub.EpubNcx())
+#        book.add_item(epub.EpubNav())
+#        #路径
+#        path="./tmp/image/%s/%s.epub"%(manga.id,ci.id)
+#        epub.write_epub(path, book, {})
+#        return os.path.getsize(path)
+
+    def compressionMobi(self,path,ci):
+#        os.popen('./bin/kindlegen_mac_i386_v2_9 %s/%s.epub -c2'%(path,ci.id)).readlines()
+        #进行压缩
+        data=open('%s/%s.mobi'%(path,ci.id), 'rb').read()
+        os.remove('%s/%s.mobi'%(path,ci.id))
+        out=SRCSStripper(data)
+        open('%s/%s.mobi'%(path,ci.id),'wb').write(out.getResult())
+
+
+
+
 
 class imagePojo:
     type=0
@@ -88,6 +151,8 @@ class MangaPage:
     kkkid=""
     name=""
     size=0
+    isbuckup=1
+    ispush=1
 
 class MangaDao:
     def __init__(self):
@@ -95,7 +160,7 @@ class MangaDao:
         create="""
             CREATE TABLE IF NOT EXISTS 'user' ('id' INTEGER PRIMARY KEY, 'email' VARCHAR, 'baidukey' VARCHAR);
             CREATE TABLE IF NOT EXISTS 'manga' ('id' INTEGER PRIMARY KEY,'kkkid' INTEGER DEFAULT '0', pageurl VARCHAR, 'name' VARCHAR, 'state' INTEGER, 'type' VARCHAR, 'author' VARCHAR, 'time' VARCHAR, 'isbuckup' INTEGER DEFAULT '1', 'ispush' INTEGER DEFAULT '1');
-            CREATE TABLE IF NOT EXISTS 'mangapage' ('hid' INTEGER PRIMARY KEY, 'manid' INTEGER,kkkid VARCHAR, 'name' VARCHAR, 'size' INTEGER);
+            CREATE TABLE IF NOT EXISTS 'mangapage' ('hid' INTEGER PRIMARY KEY, 'manid' INTEGER,'kkkid' VARCHAR, 'name' VARCHAR, 'size' INTEGER, 'isbuckup' INTEGER, 'ispush' INTEGER);
             """
         conn.executescript(create)
         conn.commit()
@@ -237,13 +302,13 @@ class MangaDao:
 
     def insertMangaPage(self,mangapage):
         conn=sqlite3.connect('./manga.db')
-        conn.execute("insert into mangapage values(null,'%d','%s','%s','%d')"%(mangapage.manid,mangapage.kkkid,mangapage.name,mangapage.size))
+        conn.execute("insert into mangapage values(null,'%d','%s','%s','%d','%d','%d')"%(mangapage.manid,mangapage.kkkid,mangapage.name,mangapage.size,mangapage.isbuckup,mangapage.ispush))
         conn.commit()
         conn.close()
 
     def updateMangaPage(self,mangapage):
         conn=sqlite3.connect('./manga.db')
-        conn.execute("update mangapage set manid=%d,kkkid='%s',name='%s',size=%d where hid=%d"%(mangapage.manid,mangapage.kkkid,mangapage.name,mangapage.size,mangapage.hid))
+        conn.execute("update mangapage set manid=%d,kkkid='%s',name='%s',size='%d',isbuckup='%d',ispush='%d' where hid=%d"%(mangapage.manid,mangapage.kkkid,mangapage.name,mangapage.size,mangapage.isbuckup,mangapage.ispush,mangapage.hid))
         conn.commit()
         conn.close()
 
@@ -273,6 +338,8 @@ class MangaDao:
             mangapage.kkkid=i[2]
             mangapage.name=i[3]
             mangapage.size=i[4]
+            mangapage.isbuckup=i[5]
+            mangapage.ispush=i[6]
             items.append(mangapage)
         conn.close()
         return items[0]
@@ -288,6 +355,8 @@ class MangaDao:
             mangapage.kkkid=i[2]
             mangapage.name=i[3]
             mangapage.size=i[4]
+            mangapage.isbuckup=i[5]
+            mangapage.ispush=i[6]
             items.append(mangapage)
         conn.close()
         return items
@@ -306,8 +375,140 @@ class MangaDao:
             mangapage.kkkid=i[2]
             mangapage.name=i[3]
             mangapage.size=i[4]
+            mangapage.isbuckup=i[5]
+            mangapage.ispush=i[6]
             items.append(mangapage)
         conn.close()
         return items[0]
+
+    def getMangaMaxID(self,url):
+        conn=sqlite3.connect('./manga.db')
+        cursor=conn.execute("select max(t1.kkkid) as max from mangapage t1 left join manga t2 on t1.manid=t2.id where t2.pageurl=''"%url)
+        data=cursor.fetchall()
+        if len(data)==0:
+            return 0
+        max=data[0][0]
+        conn.close()
+        return max
+
+class SRCSStripper:
+    data_file=b""
+    def sec_info(self, secnum):
+        start_offset, flgval = struct.unpack_from('>2L', self.datain, 78+(secnum*8))
+        if secnum == self.num_sections:
+            next_offset = len(self.datain)
+        else:
+            next_offset, nflgval = struct.unpack_from('>2L', self.datain, 78+((secnum+1)*8))
+        return start_offset, flgval, next_offset
+
+    def loadSection(self, secnum):
+        start_offset, tval, next_offset = self.sec_info(secnum)
+        return self.datain[start_offset: next_offset]
+
+
+    def __init__(self, datain):
+        if datain[0x3C:0x3C+8] != b'BOOKMOBI':
+            return None
+        self.datain = datain
+        self.num_sections, = struct.unpack('>H', datain[76:78])
+
+        # get mobiheader
+        mobiheader = self.loadSection(0)
+
+        # get SRCS section number and count
+        self.srcs_secnum, self.srcs_cnt = struct.unpack_from('>2L', mobiheader, 0xe0)
+        if self.srcs_secnum == 0xffffffff or self.srcs_cnt == 0:
+            raise StripException("File doesn't contain the sources section.")
+
+        # store away srcs sections in case the user wants them later
+        self.srcs_headers = []
+        self.srcs_data = []
+        for i in range(self.srcs_secnum, self.srcs_secnum + self.srcs_cnt):
+            data = self.loadSection(i)
+            self.srcs_headers.append(data[0:16])
+            self.srcs_data.append(data[16:])
+
+        # find its SRCS region starting offset and total length
+        self.srcs_offset, fval, temp2 = self.sec_info(self.srcs_secnum)
+        next = self.srcs_secnum + self.srcs_cnt
+        next_offset, temp1, temp2 = self.sec_info(next)
+        self.srcs_length = next_offset - self.srcs_offset
+
+        if self.datain[self.srcs_offset:self.srcs_offset+4] != b'SRCS':
+            return None
+
+        # first write out the number of sections
+        self.data_file = self.datain[:76]
+        self.data_file = self.joindata(self.data_file, struct.pack('>H',self.num_sections))
+
+        # we are going to make the SRCS section lengths all  be 0
+        # offsets up to and including the first srcs record must not be changed
+        last_offset = -1
+        for i in range(self.srcs_secnum+1):
+            offset, flgval, temp  = self.sec_info(i)
+            last_offset = offset
+            self.data_file = self.joindata(self.data_file, struct.pack('>L',offset) + struct.pack('>L',flgval))
+            # print "section: %d, offset %0x, flgval %0x" % (i, offset, flgval)
+
+        # for every additional record in SRCS records set start to last_offset (they are all zero length)
+        for i in range(self.srcs_secnum + 1, self.srcs_secnum + self.srcs_cnt):
+            temp1, flgval, temp2 = self.sec_info(i)
+            self.data_file = self.joindata(self.data_file, struct.pack('>L',last_offset) + struct.pack('>L',flgval))
+            # print "section: %d, offset %0x, flgval %0x" % (i, last_offset, flgval)
+
+        # for every record after the SRCS records we must start it earlier by an amount
+        # equal to the total length of all of the SRCS section
+        delta = 0 - self.srcs_length
+        for i in range(self.srcs_secnum + self.srcs_cnt , self.num_sections):
+            offset, flgval, temp = self.sec_info(i)
+            offset += delta
+            self.data_file = self.joindata(self.data_file, struct.pack('>L',offset) + struct.pack('>L',flgval))
+            # print "section: %d, offset %0x, flgval %0x" % (i, offset, flgval)
+
+        # now pad it out to begin right at the first offset
+        # typically this is 2 bytes of nulls
+        first_offset, flgval = struct.unpack_from('>2L', self.data_file, 78)
+        self.data_file = self.joindata(self.data_file, '\0' * (first_offset - len(self.data_file)))
+
+        # now add on every thing up to the original src_offset and then everything after it
+        dout = []
+        dout.append(self.data_file)
+        dout.append(self.datain[first_offset: self.srcs_offset])
+        dout.append(self.datain[self.srcs_offset+self.srcs_length:])
+        self.data_file = b"".join(dout)
+
+        # update the srcs_secnum and srcs_cnt in the new mobiheader
+        offset0, flgval0 = struct.unpack_from('>2L', self.data_file, 78)
+        offset1, flgval1 = struct.unpack_from('>2L', self.data_file, 86)
+        mobiheader = self.data_file[offset0:offset1]
+        mobiheader = mobiheader[:0xe0]+ struct.pack('>L', 0xffffffff) + struct.pack('>L', 0) + mobiheader[0xe8:]
+        self.data_file = self.patchdata(self.data_file, offset0, mobiheader)
+        return None
+
+    def getResult(self):
+        return self.data_file
+
+    def getStrippedData(self):
+        return self.srcs_data
+
+    def getHeader(self):
+        return self.srcs_headers
+
+    def joindata(self,datain, new):
+        dout=[]
+        if(isinstance(datain,str)):
+            datain=bytes(datain,'utf-8')
+        if(isinstance(new,str)):
+            new=bytes(new,'utf-8')
+        dout.append(datain)
+        dout.append(new)
+        return b''.join(dout)
+
+    def patchdata(self,datain, off, new):
+        dout=[]
+        dout.append(datain[:off])
+        dout.append(new)
+        dout.append(datain[off+len(new):])
+        return b''.join(dout)
 
 

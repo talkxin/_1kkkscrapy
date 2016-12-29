@@ -8,6 +8,7 @@ from _1kkk.items import Page
 from _1kkk.pipelines import MangaDao
 from _1kkk.pipelines import Manga
 from selenium import webdriver
+import urllib.request#python3
 import re
 import os
 import time
@@ -19,9 +20,11 @@ class ManSpider(BaseSpider):
     """
         获取数据库中所有需要爬取的漫画
     """
-    driver = webdriver.PhantomJS(executable_path='./phantomjs')
+    driver = webdriver.PhantomJS(executable_path='./bin/phantomjs')
     for i in dao.getMangas():
-        start_urls.append(i.pageurl)
+        #判断该漫画是否在连载中
+        if i.state==None or int(i.state)==1:
+            start_urls.append(i.pageurl)
     #所有的漫画
     items={}
     #所有的章节
@@ -112,25 +115,29 @@ class ManSpider(BaseSpider):
     """
     def parse_each_page(self,response):
         item=self.items[response.meta['id']]
+        manga=self.dao.getMangaByUrl(item['item']['url'])
         ci=self.chids[response.meta['chid']]
         length=response.meta['len']
         pagesize=response.meta['pagesize']
         furl=response.meta['furl']
         page=Page()
         jsurl=response.xpath("//text()").extract()
+        filepath="./tmp/image/%s/%s/"%(manga.id,ci.id)
+        if os.path.exists(filepath) != True:
+            os.makedirs(filepath)
         if len(ci.page)!=length:
             page.id=pagesize
-            page.imageurl=self.getImgUrl(furl,response.url,0)
+            page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
             ci.page.append(page)
         else:
             page.id=pagesize
-            page.imageurl=self.getImgUrl(furl,response.url,0)
+            page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
             ci.page.append(page)
             item['item']['chapter'].append(ci)
             if item['hualength']==len(item['item']['chapter']):
                 yield item['item']
 
-    def getImgUrl(self,furl,jsurl,max):
+    def getImgUrl(self,furl,jsurl,max,path):
         size=max
         try:
             if size<3:
@@ -147,7 +154,8 @@ class ManSpider(BaseSpider):
                     """
                 self.driver.execute_script(js)
                 imageurl=self.driver.find_element_by_id('__imgurl').text
-                return imageurl
+                urllib.request.urlretrieve(imageurl, path)
+                return path
             else:
                 return ""
         except Exception as e:
