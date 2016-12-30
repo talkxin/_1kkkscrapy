@@ -15,6 +15,13 @@ import time
 import platform
 
 class ManSpider(BaseSpider):
+    
+    global phantomjspath
+    sysstr = platform.system()
+    if sysstr == "Linux":
+        phantomjspath='./bin/phantomjs_linux'
+    else:
+        phantomjspath='./bin/phantomjs_mac'
     name="manhua"
     start_urls=[]
     dao=MangaDao()
@@ -25,12 +32,6 @@ class ManSpider(BaseSpider):
 #    cap["phantomjs.page.settings.resourceTimeout"] = 5000
     cap["phantomjs.page.settings.loadImages"] = False
 #    cap["phantomjs.page.settings.userAgent"] = "faking it"
-    phantomjspath=''
-    sysstr = platform.system()
-    if sysstr == "Linux":
-        phantomjspath='./bin/phantomjs_linux_x64'
-    else:
-        phantomjspath='./bin/phantomjs_mac'
     driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=cap)
     driver.set_page_load_timeout(30)
     for i in dao.getMangas():
@@ -172,7 +173,7 @@ class ManSpider(BaseSpider):
                 return ""
         except Exception as e:
                 self.driver.quit()
-                self.driver = webdriver.PhantomJS(executable_path=self.phantomjspath,desired_capabilities=self.cap)
+                self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
                 self.driver.set_page_load_timeout(30)
                 self.driver.get(furl)
                 time.sleep(3)
