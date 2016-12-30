@@ -32,7 +32,6 @@ class ManSpider(BaseSpider):
 #    cap["phantomjs.page.settings.resourceTimeout"] = 5000
     cap["phantomjs.page.settings.loadImages"] = False
 #    cap["phantomjs.page.settings.userAgent"] = "faking it"
-    print(phantomjspath)
     driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=cap)
     driver.set_page_load_timeout(30)
     for i in dao.getMangas():
