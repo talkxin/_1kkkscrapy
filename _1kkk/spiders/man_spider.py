@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from scrapy.spiders import BaseSpider
+import scrapy
 from scrapy.selector import Selector
 from scrapy import Request
 from _1kkk.items import KkkItem
@@ -14,7 +14,7 @@ import os
 import time
 import platform
 
-class ManSpider(BaseSpider):
+class ManSpider(scrapy.Spider):
     
     global phantomjspath
     sysstr = platform.system()
