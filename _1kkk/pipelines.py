@@ -15,7 +15,7 @@ import struct
 import pickle
 import shutil
 #from libs import ebooklib
-from _1kkk.libs.ebooklib.ebooklib import epub
+#from _1kkk.libs.ebooklib.ebooklib import epub
 from _1kkk.libs.kcc.kcc.comic2ebook import createKVBook
 
 
