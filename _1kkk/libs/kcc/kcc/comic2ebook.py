@@ -38,6 +38,7 @@ from PIL import Image
 from subprocess import STDOUT, PIPE
 from psutil import Popen, virtual_memory
 from html import escape
+import platform
 try:
     from PyQt5 import QtCore
 except ImportError:
@@ -81,7 +82,13 @@ def main(argv=None):
     return 0
 
 def createKVBook(input,outputfile,title):
-    option=['--profile=KV','--format=MOBI','--upscale', input]
+    global kindlegenpath
+    sysstr = platform.system()
+    if sysstr == "Linux":
+        kindlegenpath='./bin/kindlegen_linux_i386_v2_9'
+    else:
+        kindlegenpath='./bin/kindlegen_mac_i386_v2_9'
+    option=['--profile=KV','--format=MOBI','--upscale --forcecolor', input]
     option.insert(-1,'--title=%s'%title)
     option.insert(-1,'--output=%s'%outputfile)
     main(option)
@@ -995,7 +1002,7 @@ def checkTools(source):
             print('ERROR: 7za is missing!')
             exit(1)
     if options.format == 'MOBI':
-        kindleGenExitCode = Popen('./bin/kindlegen -locale en', stdout=PIPE, stderr=STDOUT, stdin=PIPE, shell=True)
+        kindleGenExitCode = Popen('%s -locale en'%kindlegenpath, stdout=PIPE, stderr=STDOUT, stdin=PIPE, shell=True)
         if kindleGenExitCode.wait() != 0:
             print('ERROR: KindleGen is missing!')
             exit(1)
@@ -1142,7 +1149,7 @@ def makeMOBIWorker(item):
     kindlegenError = ''
     try:
         if os.path.getsize(item) < 629145600:
-            output = Popen('./bin/kindlegen -dont_append_source -locale en "' + item + '"',
+            output = Popen(kindlegenpath+' -dont_append_source -locale en "' + item + '"',
                            stdout=PIPE, stderr=STDOUT, stdin=PIPE, shell=True)
             for line in output.stdout:
                 line = line.decode('utf-8')

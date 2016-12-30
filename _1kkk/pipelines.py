@@ -67,8 +67,8 @@ class downloadImage(threading.Thread):
             filepath="./tmp/image/%s/%s/"%(mPage.manid,mPage.kkkid)
             #生成epub
             mPage.size=self.createEpub(manga,ci,filepath)
-            #生成mobi
-            self.compressionMobi("./tmp/image/%s/"%(mPage.manid),ci)
+#            #压缩mobi
+#            self.compressionMobi("./tmp/image/%s/"%(mPage.manid),ci)
             #注册该漫画已完成下载,入库
 #            self.db.insertMangaPage(mPage)
             #开始备份云盘与推送到kindle
@@ -117,7 +117,7 @@ class downloadImage(threading.Thread):
         data=open('%s/%s.mobi'%(path,ci.id), 'rb').read()
         os.remove('%s/%s.mobi'%(path,ci.id))
         out=SRCSStripper(data)
-        open('%s/%s.mobi'%(path,ci.id),'wb').write(out.getResult())
+        open('%s/%s-1.mobi'%(path,ci.id),'wb').write(out.getResult())
 
 
 
@@ -159,7 +159,7 @@ class MangaDao:
         conn=sqlite3.connect('./manga.db')
         create="""
             CREATE TABLE IF NOT EXISTS 'user' ('id' INTEGER PRIMARY KEY, 'email' VARCHAR, 'baidukey' VARCHAR);
-            CREATE TABLE IF NOT EXISTS 'manga' ('id' INTEGER PRIMARY KEY,'kkkid' INTEGER DEFAULT '0', pageurl VARCHAR, 'name' VARCHAR, 'state' INTEGER, 'type' VARCHAR, 'author' VARCHAR, 'time' VARCHAR, 'isbuckup' INTEGER DEFAULT '1', 'ispush' INTEGER DEFAULT '1');
+            CREATE TABLE IF NOT EXISTS 'manga' ('id' INTEGER PRIMARY KEY,'kkkid' INTEGER DEFAULT '0', pageurl VARCHAR, 'name' VARCHAR, 'state' INTEGER DEFAULT '1', 'type' VARCHAR, 'author' VARCHAR, 'time' VARCHAR, 'isbuckup' INTEGER DEFAULT '1', 'ispush' INTEGER DEFAULT '1');
             CREATE TABLE IF NOT EXISTS 'mangapage' ('hid' INTEGER PRIMARY KEY, 'manid' INTEGER,'kkkid' VARCHAR, 'name' VARCHAR, 'size' INTEGER, 'isbuckup' INTEGER, 'ispush' INTEGER);
             """
         conn.executescript(create)

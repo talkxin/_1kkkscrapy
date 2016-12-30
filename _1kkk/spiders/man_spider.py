@@ -12,6 +12,7 @@ import urllib.request#python3
 import re
 import os
 import time
+import platform
 
 class ManSpider(BaseSpider):
     name="manhua"
@@ -20,10 +21,21 @@ class ManSpider(BaseSpider):
     """
         获取数据库中所有需要爬取的漫画
     """
-    driver = webdriver.PhantomJS(executable_path='./bin/phantomjs')
+    cap = webdriver.DesiredCapabilities.PHANTOMJS
+#    cap["phantomjs.page.settings.resourceTimeout"] = 5000
+    cap["phantomjs.page.settings.loadImages"] = False
+#    cap["phantomjs.page.settings.userAgent"] = "faking it"
+    phantomjspath=''
+    sysstr = platform.system()
+    if sysstr == "Linux":
+        phantomjspath='./bin/phantomjs_linux_x64'
+    else:
+        phantomjspath='./bin/phantomjs_mac'
+    driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=cap)
+    driver.set_page_load_timeout(30)
     for i in dao.getMangas():
         #判断该漫画是否在连载中
-        if i.state==None or int(i.state)==1:
+        if int(i.state)==1:
             start_urls.append(i.pageurl)
     #所有的漫画
     items={}
@@ -140,7 +152,7 @@ class ManSpider(BaseSpider):
     def getImgUrl(self,furl,jsurl,max,path):
         size=max
         try:
-            if size<3:
+            if size<5:
                 size=size+1
                 self.driver.get(jsurl)
                 js="""
@@ -159,6 +171,9 @@ class ManSpider(BaseSpider):
             else:
                 return ""
         except Exception as e:
+                self.driver.quit()
+                self.driver = webdriver.PhantomJS(executable_path=self.phantomjspath,desired_capabilities=self.cap)
+                self.driver.set_page_load_timeout(30)
                 self.driver.get(furl)
                 time.sleep(3)
                 return self.getImgUrl(furl,jsurl,size)
