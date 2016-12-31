@@ -17,9 +17,17 @@ import shutil
 #from libs import ebooklib
 #from _1kkk.libs.ebooklib.ebooklib import epub
 from _1kkk.libs.kcc.kcc.comic2ebook import createKVBook
+from _1kkk.items import KkkItem
 
 
 class KkkPipeline(object):
+    
+    def open_spider(self, spider):
+        self.man=downloadImage()
+        self.man.start()
+    
+    def close_spider(self, spider):
+        self.man.put("out")
     
     """
         每个漫画创建一个下载线程进行下载
@@ -33,31 +41,42 @@ class KkkPipeline(object):
                 在小服务器的情况下会导致内存溢出的bug。
             v1.1改造为线程池根据服务器情况动态调整线程池的最大处理上线，来防止生成epub时导致内存溢出。
         """
-        man=downloadImage(item)
-        man.start()
+        self.man.put(item)
         return item
 
 
 class downloadImage(threading.Thread):
-    def __init__(self,items):
-        self.item=items
+    def __init__(self):
         self.db=MangaDao()
+        self.queue=queue.Queue(0)
         super().__init__()
-
+    
+    def put(self,items):
+        self.queue.put(items)
+    
     def run(self):
-        url=self.item['url']
+        while True:
+            items=self.queue.get()
+            if(isinstance(items,KkkItem)):
+                self.initManga(items)
+            else:
+                break
+    
+
+    def initManga(self,items):
+        url=items['url']
         manga=self.db.getMangaByUrl(url)
-        manga.kkkid=self.item['id']
-        manga.name=self.item['name']
+        manga.kkkid=items['id']
+        manga.name=items['name']
         if self.item['state']=="连载中":
             manga.state=1
         else:
             manga.state=0
-        manga.type=self.item['type']
-        manga.time=self.item['time']
-        manga.author=self.item['author']
+        manga.type=items['type']
+        manga.time=items['time']
+        manga.author=items['author']
         self.db.updateManga(manga)
-        for ci in self.item['chapter']:
+        for ci in items['chapter']:
             mPage=MangaPage()
             mPage.manid=manga.id
             mPage.kkkid=ci.id
@@ -67,12 +86,10 @@ class downloadImage(threading.Thread):
             filepath="./tmp/image/%s/%s/"%(mPage.manid,mPage.kkkid)
             #生成epub
             mPage.size=self.createEpub(manga,ci,filepath)
-#            #压缩mobi
-#            self.compressionMobi("./tmp/image/%s/"%(mPage.manid),ci)
             #注册该漫画已完成下载,入库
-#            self.db.insertMangaPage(mPage)
+            self.db.insertMangaPage(mPage)
             #开始备份云盘与推送到kindle
-
+            
 
     def createEpub(self,manga,ci,path):
         #路径

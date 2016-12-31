@@ -88,7 +88,7 @@ def createKVBook(input,outputfile,title):
         kindlegenpath='./bin/kindlegen_linux_i386_v2_9'
     else:
         kindlegenpath='./bin/kindlegen_mac_i386_v2_9'
-    option=['--profile=KV','--format=MOBI','--upscale --forcecolor', input]
+    option=['--profile=KV','--format=MOBI','--upscale','--forcecolor', input]
     option.insert(-1,'--title=%s'%title)
     option.insert(-1,'--output=%s'%outputfile)
     main(option)
