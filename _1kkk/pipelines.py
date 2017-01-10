@@ -14,6 +14,9 @@ import sqlite3
 import struct
 import pickle
 import shutil
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 #from libs import ebooklib
 #from _1kkk.libs.ebooklib.ebooklib import epub
 from _1kkk.libs.kcc.kcc.comic2ebook import createKVBook
@@ -23,6 +26,15 @@ from _1kkk.items import KkkItem
 class KkkPipeline(object):
     
     def open_spider(self, spider):
+        #初始化邮箱
+        db=MangaDao()
+        #默认读取首位用户
+        self.user=db.getUserbyID(1)
+        self.smtp = smtplib.SMTP()
+        self.smtp.connect(self.user.sendMail_smtp)
+        self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
+        
+        #初始化队列文件
         self.man=downloadImage()
         self.man.start()
     
@@ -88,8 +100,25 @@ class downloadImage(threading.Thread):
             mPage.size=self.createEpub(manga,ci,filepath)
             #注册该漫画已完成下载,入库
             self.db.insertMangaPage(mPage)
+            #获取该漫画的推送活保存权限
+            man=self.db.getMangaPageByMan(manga.manid)
+            epubpath="./tmp/image/%s/%s.epub"%(manga.id,ci.id)
+            if man.isbuckup==1:
             #开始备份云盘与推送到kindle
-            
+                print("save")
+            #开始发送邮件
+            if man.ispush==1:
+                with open(epubpath, 'rb') as e:
+                    msgRoot = MIMEMultipart('related')
+                    msgRoot['Subject'] = mPage.kkkid
+                    att = MIMEText(e.read(), 'base64', 'utf-8')
+                    att["Content-Type"] = 'application/octet-stream'
+                    att["Content-Disposition"] = 'attachment; filename="%s.epub"'%ci.id
+                    msgRoot.attach(att)
+                    smtp.sendmail(self.user.sendMail, self.user.kindleMail, msgRoot.as_string())
+
+
+
 
     def createEpub(self,manga,ci,path):
         #路径
@@ -147,8 +176,12 @@ class imagePojo:
 
 class User:
     id=0
-    email=""
     baidukey=""
+    kindleMail=""
+    sendMail=""
+    sendMail_smtp=""
+    sendMail_username=""
+    sendMail_password=""
 
 class Manga:
     id=0
@@ -175,7 +208,7 @@ class MangaDao:
     def __init__(self):
         conn=sqlite3.connect('./manga.db')
         create="""
-            CREATE TABLE IF NOT EXISTS 'user' ('id' INTEGER PRIMARY KEY, 'email' VARCHAR, 'baidukey' VARCHAR);
+            CREATE TABLE IF NOT EXISTS 'user' ('id' INTEGER PRIMARY KEY, 'baidukey' VARCHAR,'kindleMail' VARCHAR,'sendMail' VARCHAR,'sendMail_smtp' VARCHAR,'sendMail_username' VARCHAR, 'sendMail_password' VARCHAR );
             CREATE TABLE IF NOT EXISTS 'manga' ('id' INTEGER PRIMARY KEY,'kkkid' INTEGER DEFAULT '0', pageurl VARCHAR, 'name' VARCHAR, 'state' INTEGER DEFAULT '1', 'type' VARCHAR, 'author' VARCHAR, 'time' VARCHAR, 'isbuckup' INTEGER DEFAULT '1', 'ispush' INTEGER DEFAULT '1');
             CREATE TABLE IF NOT EXISTS 'mangapage' ('hid' INTEGER PRIMARY KEY, 'manid' INTEGER,'kkkid' VARCHAR, 'name' VARCHAR, 'size' INTEGER, 'isbuckup' INTEGER, 'ispush' INTEGER);
             """
@@ -185,7 +218,7 @@ class MangaDao:
 
     def insertUser(self,user):
         conn=sqlite3.connect('./manga.db')
-        conn.execute("insert into user values(null,'%s','%s')"%(user.email,user.baidukey))
+        conn.execute("insert into user values(null,'%s','%s','%s','%s','%s','%s')"%(user.baidukey,user.kindleMail,user.sendMail,user.sendMail_smtp,user.sendMail_username,user.sendMail_password))
         conn.commit()
         conn.close()
 
@@ -197,7 +230,7 @@ class MangaDao:
 
     def updaetUser(self,user):
         conn=sqlite3.connect('./manga.db')
-        conn.execute("update user set email='%s',baidukey='%s'"%(user.email,user.baidukey))
+        conn.execute("update user set baidukey='%s' kindleMail='%s' sendMail='%s' sendMail_smtp='%s' sendMail_username='%s' sendMail_password='%s'"%(user.baidukey,user.kindleMail,user.sendMail,user.sendMail_smtp,user.sendMail_username,user.sendMail_password))
         conn.commit()
         conn.close()
 
@@ -208,8 +241,12 @@ class MangaDao:
         for i in cursor:
             user=User()
             user.id=i[0]
-            user.email=i[1]
-            user.baidukey=i[2]
+            user.baidukey=i[1]
+            user.kindleMail=i[2]
+            user.sendMail=i[3]
+            user.sendMail_smtp=i[4]
+            user.sendMail_username=i[5]
+            user.sendMail_password=i[6]
             items.append(user)
         conn.close()
         return items
@@ -221,8 +258,12 @@ class MangaDao:
         for i in cursor:
             user=User()
             user.id=i[0]
-            user.email=i[1]
-            user.baidukey=i[2]
+            user.baidukey=i[1]
+            user.kindleMail=i[2]
+            user.sendMail=i[3]
+            user.sendMail_smtp=i[4]
+            user.sendMail_username=i[5]
+            user.sendMail_password=i[6]
             items.append(user)
         conn.close()
 
