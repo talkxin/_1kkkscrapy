@@ -102,7 +102,7 @@ class downloadImage(threading.Thread):
             #生成epub
             mPage.size=self.createEpub(manga,ci,filepath)
             #注册该漫画已完成下载,入库
-#            self.db.insertMangaPage(mPage)
+            self.db.insertMangaPage(mPage)
             #获取该漫画的推送活保存权限
             man=self.db.getMangaByKkkid(manga.kkkid)
             epubpath="./tmp/image/%s/%s"%(manga.id,ci.id)
@@ -123,6 +123,8 @@ class downloadImage(threading.Thread):
                     ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.zip'%mPage.name)
                     mPage.isbuckup=1
             
+            #更新数据库状态
+            self.db.updateMangaPageBykkkid(mPage)
             os.remove("%s.mobi"%epubpath)
             os.remove("%s.zip"%epubpath)
 
@@ -422,6 +424,12 @@ class MangaDao:
     def updateMangaPage(self,mangapage):
         conn=sqlite3.connect('./manga.db')
         conn.execute("update mangapage set manid=%d,kkkid='%s',name='%s',size='%d',isbuckup='%d',ispush='%d' where hid=%d"%(mangapage.manid,mangapage.kkkid,mangapage.name,mangapage.size,mangapage.isbuckup,mangapage.ispush,mangapage.hid))
+        conn.commit()
+        conn.close()
+
+    def updateMangaPageBykkkid(self,mangapage):
+        conn=sqlite3.connect('./manga.db')
+        conn.execute("update mangapage set manid=%d,name='%s',size='%d',isbuckup='%d',ispush='%d' where kkkid=%d"%(mangapage.manid,mangapage.name,mangapage.size,mangapage.isbuckup,mangapage.ispush,mangapage.kkkid))
         conn.commit()
         conn.close()
 
