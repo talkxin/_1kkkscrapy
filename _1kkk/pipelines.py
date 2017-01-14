@@ -5,7 +5,8 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 import re
-import os
+import os,os.path
+import zipfile
 #import requests
 import threading
 import queue
@@ -20,20 +21,13 @@ from email.mime.text import MIMEText
 #from libs import ebooklib
 #from _1kkk.libs.ebooklib.ebooklib import epub
 from _1kkk.libs.kcc.kcc.comic2ebook import createKVBook
+from _1kkk.libs.baidupcsapi.baidupcsapi import PCS
 from _1kkk.items import KkkItem
 
 
 class KkkPipeline(object):
     
     def open_spider(self, spider):
-        #初始化邮箱
-        db=MangaDao()
-        #默认读取首位用户
-        self.user=db.getUserbyID(1)
-        self.smtp = smtplib.SMTP()
-        self.smtp.connect(self.user.sendMail_smtp)
-        self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
-        
         #初始化队列文件
         self.man=downloadImage()
         self.man.start()
@@ -61,15 +55,23 @@ class downloadImage(threading.Thread):
     def __init__(self):
         self.db=MangaDao()
         self.queue=queue.Queue(0)
+        #默认读取首位用户
+        self.user=self.db.getUserbyID(1)
+        self.smtp = smtplib.SMTP()
+        self.smtp.connect(self.user.sendMail_smtp)
+        self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
+        self.pcs = PCS(self.user.baiduname,self.user.baidupass)
         super().__init__()
     
     def put(self,items):
+        print("put")
         self.queue.put(items)
     
     def run(self):
         while True:
             items=self.queue.get()
             if(isinstance(items,KkkItem)):
+                print("into")
                 self.initManga(items)
             else:
                 break
@@ -80,7 +82,7 @@ class downloadImage(threading.Thread):
         manga=self.db.getMangaByUrl(url)
         manga.kkkid=items['id']
         manga.name=items['name']
-        if self.item['state']=="连载中":
+        if items['state']=="连载中":
             manga.state=1
         else:
             manga.state=0
@@ -89,6 +91,7 @@ class downloadImage(threading.Thread):
         manga.author=items['author']
         self.db.updateManga(manga)
         for ci in items['chapter']:
+            print('into 1')
             mPage=MangaPage()
             mPage.manid=manga.id
             mPage.kkkid=ci.id
@@ -99,34 +102,45 @@ class downloadImage(threading.Thread):
             #生成epub
             mPage.size=self.createEpub(manga,ci,filepath)
             #注册该漫画已完成下载,入库
-            self.db.insertMangaPage(mPage)
+#            self.db.insertMangaPage(mPage)
             #获取该漫画的推送活保存权限
-            man=self.db.getMangaPageByMan(manga.manid)
-            epubpath="./tmp/image/%s/%s.epub"%(manga.id,ci.id)
-            if man.isbuckup==1:
-            #开始备份云盘与推送到kindle
-                print("save")
-            #开始发送邮件
-            if man.ispush==1:
-                with open(epubpath, 'rb') as e:
+            man=self.db.getMangaByKkkid(manga.kkkid)
+            epubpath="./tmp/image/%s/%s"%(manga.id,ci.id)
+            with open("%s.mobi"%epubpath, 'rb') as e:
+                #开始发送邮件
+                if man.ispush==1:
                     msgRoot = MIMEMultipart('related')
                     msgRoot['Subject'] = mPage.kkkid
                     att = MIMEText(e.read(), 'base64', 'utf-8')
                     att["Content-Type"] = 'application/octet-stream'
-                    att["Content-Disposition"] = 'attachment; filename="%s.epub"'%ci.id
+                    att["Content-Disposition"] = 'attachment; filename="%s.mobi"'%ci.id
                     msgRoot.attach(att)
-                    smtp.sendmail(self.user.sendMail, self.user.kindleMail, msgRoot.as_string())
+                    self.smtp.sendmail(self.user.sendMail, self.user.kindleMail, msgRoot.as_string())
+                    mPage.ispush=1
+            with open("%s.zip"%epubpath, 'rb') as e:
+                #开始备份云盘与推送到kindle
+                if man.isbuckup==1:
+                    ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.zip'%mPage.name)
+                    mPage.isbuckup=1
+            
+            os.remove("%s.mobi"%epubpath)
+            os.remove("%s.zip"%epubpath)
 
 
 
 
     def createEpub(self,manga,ci,path):
         #路径
-        epubpath="./tmp/image/%s/%s.epub"%(manga.id,ci.id)
+        epubpath="./tmp/image/%s/%s"%(manga.id,ci.id)
         title="%s[%s][%s][%s]"%(manga.name,ci.chid,manga.author,manga.type)
-        createKVBook(path,epubpath,title)
+        createKVBook(path,"%s.epub"%epubpath,title)
+        #删除epub
+        os.remove("%s.epub"%epubpath)
+        #压缩path
+        self.zip_dir(path,"%s.zip"%epubpath)
+        #删除目录
         shutil.rmtree(path)
-        return os.path.getsize(epubpath)
+        return os.path.getsize("%s.mobi"%epubpath)
 #        book = epub.EpubBook()
 #        #绝对ID
 #        book.set_identifier(ci.id)
@@ -157,6 +171,20 @@ class downloadImage(threading.Thread):
 #        epub.write_epub(path, book, {})
 #        return os.path.getsize(path)
 
+    def zip_dir(self,dirname,zipfilename):
+        filelist = []
+        if os.path.isfile(dirname):
+            filelist.append(dirname)
+        else :
+            for root, dirs, files in os.walk(dirname):
+                for name in files:
+                    filelist.append(os.path.join(root, name))
+        zf = zipfile.ZipFile(zipfilename, "w", zipfile.zlib.DEFLATED)
+        for tar in filelist:
+            arcname = tar[len(dirname):]
+            zf.write(tar,arcname)
+        zf.close()
+
     def compressionMobi(self,path,ci):
 #        os.popen('./bin/kindlegen_mac_i386_v2_9 %s/%s.epub -c2'%(path,ci.id)).readlines()
         #进行压缩
@@ -176,12 +204,13 @@ class imagePojo:
 
 class User:
     id=0
-    baidukey=""
     kindleMail=""
     sendMail=""
     sendMail_smtp=""
     sendMail_username=""
     sendMail_password=""
+    baiduname=""
+    baidupass=""
 
 class Manga:
     id=0
@@ -208,7 +237,7 @@ class MangaDao:
     def __init__(self):
         conn=sqlite3.connect('./manga.db')
         create="""
-            CREATE TABLE IF NOT EXISTS 'user' ('id' INTEGER PRIMARY KEY, 'baidukey' VARCHAR,'kindleMail' VARCHAR,'sendMail' VARCHAR,'sendMail_smtp' VARCHAR,'sendMail_username' VARCHAR, 'sendMail_password' VARCHAR );
+            CREATE TABLE IF NOT EXISTS 'user' ('id' INTEGER PRIMARY KEY,'kindleMail' VARCHAR,'sendMail' VARCHAR,'sendMail_smtp' VARCHAR,'sendMail_username' VARCHAR, 'sendMail_password' VARCHAR,'baiduname' VARCHAR,'baidupass' VARCHAR);
             CREATE TABLE IF NOT EXISTS 'manga' ('id' INTEGER PRIMARY KEY,'kkkid' INTEGER DEFAULT '0', pageurl VARCHAR, 'name' VARCHAR, 'state' INTEGER DEFAULT '1', 'type' VARCHAR, 'author' VARCHAR, 'time' VARCHAR, 'isbuckup' INTEGER DEFAULT '1', 'ispush' INTEGER DEFAULT '1');
             CREATE TABLE IF NOT EXISTS 'mangapage' ('hid' INTEGER PRIMARY KEY, 'manid' INTEGER,'kkkid' VARCHAR, 'name' VARCHAR, 'size' INTEGER, 'isbuckup' INTEGER, 'ispush' INTEGER);
             """
@@ -218,7 +247,7 @@ class MangaDao:
 
     def insertUser(self,user):
         conn=sqlite3.connect('./manga.db')
-        conn.execute("insert into user values(null,'%s','%s','%s','%s','%s','%s')"%(user.baidukey,user.kindleMail,user.sendMail,user.sendMail_smtp,user.sendMail_username,user.sendMail_password))
+        conn.execute("insert into user values(null,'%s','%s','%s','%s','%s','%s','%s')"%(user.kindleMail,user.sendMail,user.sendMail_smtp,user.sendMail_username,user.sendMail_password,user.baiduname,user.baidupass))
         conn.commit()
         conn.close()
 
@@ -230,7 +259,7 @@ class MangaDao:
 
     def updaetUser(self,user):
         conn=sqlite3.connect('./manga.db')
-        conn.execute("update user set baidukey='%s' kindleMail='%s' sendMail='%s' sendMail_smtp='%s' sendMail_username='%s' sendMail_password='%s'"%(user.baidukey,user.kindleMail,user.sendMail,user.sendMail_smtp,user.sendMail_username,user.sendMail_password))
+        conn.execute("update user set kindleMail='%s' sendMail='%s' sendMail_smtp='%s' sendMail_username='%s' sendMail_password='%s' baiduname='%s' baidupass='%s'"%(user.baidukey,user.kindleMail,user.sendMail,user.sendMail_smtp,user.sendMail_username,user.sendMail_password,user.baiduname,user.baidupass))
         conn.commit()
         conn.close()
 
@@ -241,12 +270,13 @@ class MangaDao:
         for i in cursor:
             user=User()
             user.id=i[0]
-            user.baidukey=i[1]
-            user.kindleMail=i[2]
-            user.sendMail=i[3]
-            user.sendMail_smtp=i[4]
-            user.sendMail_username=i[5]
-            user.sendMail_password=i[6]
+            user.kindleMail=i[1]
+            user.sendMail=i[2]
+            user.sendMail_smtp=i[3]
+            user.sendMail_username=i[4]
+            user.sendMail_password=i[5]
+            user.baiduname=i[6]
+            user.baidupass=i[7]
             items.append(user)
         conn.close()
         return items
@@ -258,14 +288,16 @@ class MangaDao:
         for i in cursor:
             user=User()
             user.id=i[0]
-            user.baidukey=i[1]
-            user.kindleMail=i[2]
-            user.sendMail=i[3]
-            user.sendMail_smtp=i[4]
-            user.sendMail_username=i[5]
-            user.sendMail_password=i[6]
+            user.kindleMail=i[1]
+            user.sendMail=i[2]
+            user.sendMail_smtp=i[3]
+            user.sendMail_username=i[4]
+            user.sendMail_password=i[5]
+            user.baiduname=i[6]
+            user.baidupass=i[7]
             items.append(user)
         conn.close()
+        return items[0]
 
     def insertManga(self,manga):
         conn=sqlite3.connect('./manga.db')
@@ -338,6 +370,29 @@ class MangaDao:
     def getMangaByUrl(self,url):
         conn=sqlite3.connect('./manga.db')
         cursor=conn.execute("select * from manga where pageurl='%s'"%url)
+        data=cursor.fetchall()
+        if len(data)==0:
+            return None
+        items=[]
+        for i in data:
+            manga=Manga()
+            manga.id=i[0]
+            manga.kkkid=i[1]
+            manga.pageurl=i[2]
+            manga.name=i[3]
+            manga.state=i[4]
+            manga.type=i[5]
+            manga.author=i[6]
+            manga.time=i[7]
+            manga.isbuckup=i[8]
+            manga.ispush=i[9]
+            items.append(manga)
+        conn.close()
+        return items[0]
+
+    def getMangaByKkkid(self,url):
+        conn=sqlite3.connect('./manga.db')
+        cursor=conn.execute("select * from manga where kkkid='%s'"%url)
         data=cursor.fetchall()
         if len(data)==0:
             return None

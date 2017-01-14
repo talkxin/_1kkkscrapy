@@ -36,7 +36,7 @@ class ManSpider(scrapy.Spider):
     driver.set_page_load_timeout(30)
     for i in dao.getMangas():
         #判断该漫画是否在连载中
-        if int(i.state)==1:
+        if i.state==None or int(i.state)==1:
             start_urls.append(i.pageurl)
     #所有的漫画
     items={}
