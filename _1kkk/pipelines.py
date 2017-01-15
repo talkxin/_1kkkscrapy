@@ -76,60 +76,63 @@ class downloadImage(threading.Thread):
     
 
     def initManga(self,items):
-        url=items['url']
-        manga=self.db.getMangaByUrl(url)
-        manga.kkkid=items['id']
-        manga.name=items['name']
-        if items['state']=="连载中":
-            manga.state=1
-        else:
-            manga.state=0
-        manga.type=items['type']
-        manga.time=items['time']
-        manga.author=items['author']
-        self.db.updateManga(manga)
-        for ci in items['chapter']:
-            mPage=MangaPage()
-            mPage.manid=manga.id
-            mPage.kkkid=ci.id
-            mPage.name=ci.chid
-            mPage.isbuckup=0
-            mPage.ispush=0
-            filepath="./tmp/image/%s/%s/"%(mPage.manid,mPage.kkkid)
-            #生成epub
-            mPage.size=self.createEpub(manga,ci,filepath)
-            #获取该漫画的推送活保存权限
-            man=self.db.getMangaByKkkid(manga.kkkid)
-            epubpath="./tmp/image/%s/%s"%(manga.id,ci.id)
-            with open("%s.mobi"%epubpath, 'rb') as e:
-                #开始发送邮件
-                if man.ispush==1:
-                    msgRoot = MIMEMultipart('related')
-                    msgRoot['Subject'] = mPage.kkkid
-                    msgRoot['From']=self.user.sendMail
-                    msgRoot['To']=self.user.kindleMail
-                    att = MIMEText(e.read(), 'base64', 'utf-8')
-                    att["Content-Type"] = 'application/octet-stream'
-                    att["Content-Disposition"] = 'attachment; filename="%s.mobi"'%ci.id
-                    msgRoot.attach(att)
-                    self.smtp.sendmail(self.user.sendMail, self.user.kindleMail, msgRoot.as_string())
-                    mPage.ispush=1
+        try:
+            url=items['url']
+            manga=self.db.getMangaByUrl(url)
+            manga.kkkid=items['id']
+            manga.name=items['name']
+            if items['state']=="连载中":
+                manga.state=1
+            else:
+                manga.state=0
+            manga.type=items['type']
+            manga.time=items['time']
+            manga.author=items['author']
+            self.db.updateManga(manga)
+            for ci in items['chapter']:
+                mPage=MangaPage()
+                mPage.manid=manga.id
+                mPage.kkkid=ci.id
+                mPage.name=ci.chid
+                mPage.isbuckup=0
+                mPage.ispush=0
+                filepath="./tmp/image/%s/%s/"%(mPage.manid,mPage.kkkid)
+                #生成epub
+                mPage.size=self.createEpub(manga,ci,filepath)
+                #获取该漫画的推送活保存权限
+                man=self.db.getMangaByKkkid(manga.kkkid)
+                epubpath="./tmp/image/%s/%s"%(manga.id,ci.id)
+                with open("%s.mobi"%epubpath, 'rb') as e:
+                    #开始发送邮件
+                    if man.ispush==1:
+                        msgRoot = MIMEMultipart('related')
+                        msgRoot['Subject'] = mPage.kkkid
+                        msgRoot['From']=self.user.sendMail
+                        msgRoot['To']=self.user.kindleMail
+                        att = MIMEText(e.read(), 'base64', 'utf-8')
+                        att["Content-Type"] = 'application/octet-stream'
+                        att["Content-Disposition"] = 'attachment; filename="%s.mobi"'%ci.id
+                        msgRoot.attach(att)
+                        self.smtp.sendmail(self.user.sendMail, self.user.kindleMail, msgRoot.as_string())
+                        mPage.ispush=1
+                    
+                with open("%s.zip"%epubpath, 'rb') as e:
+                    #开始备份云盘与推送到kindle
+                    if man.isbuckup==1:
+                        ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.zip'%mPage.name)
+                        mPage.isbuckup=1
                 
-            with open("%s.zip"%epubpath, 'rb') as e:
-                #开始备份云盘与推送到kindle
-                if man.isbuckup==1:
-                    ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.zip'%mPage.name)
-                    mPage.isbuckup=1
-            
-            with open("%s.mobi"%epubpath, 'rb') as e:
-                #向云盘备份mobi
-                if man.isbuckup==1:
-                    ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
-            #注册该漫画已完成下载,入库
-            self.db.insertMangaPage(mPage)
-            #删除缓存文件
-            os.remove("%s.mobi"%epubpath)
-            os.remove("%s.zip"%epubpath)
+                with open("%s.mobi"%epubpath, 'rb') as e:
+                    #向云盘备份mobi
+                    if man.isbuckup==1:
+                        ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
+                #注册该漫画已完成下载,入库
+                self.db.insertMangaPage(mPage)
+                #删除缓存文件
+                os.remove("%s.mobi"%epubpath)
+                os.remove("%s.zip"%epubpath)
+        except Exception as e:
+            print(e) 
 
 
 
