@@ -114,15 +114,17 @@ class downloadImage(threading.Thread):
                     msgRoot.attach(att)
                     self.smtp.sendmail(self.user.sendMail, self.user.kindleMail, msgRoot.as_string())
                     mPage.ispush=1
-                #向云盘备份mobi
-                if man.isbuckup==1:
-                    ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
                 
             with open("%s.zip"%epubpath, 'rb') as e:
                 #开始备份云盘与推送到kindle
                 if man.isbuckup==1:
                     ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.zip'%mPage.name)
                     mPage.isbuckup=1
+            
+            with open("%s.mobi"%epubpath, 'rb') as e:
+                #向云盘备份mobi
+                if man.isbuckup==1:
+                    ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
             
             #更新数据库状态
             self.db.updateMangaPageBykkkid(mPage)

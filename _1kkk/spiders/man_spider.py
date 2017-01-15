@@ -146,10 +146,10 @@ class ManSpider(scrapy.Spider):
             page.id=pagesize
             page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
             ci.page.append(page)
-            item['item']['chapter']=[ci]
-#            item['item']['chapter'].append(ci)
-#            if item['hualength']==len(item['item']['chapter']):
-            yield item['item']
+#            item['item']['chapter']=[ci]
+            item['item']['chapter'].append(ci)
+            if item['hualength']==len(item['item']['chapter']):
+                yield item['item']
 
     def getImgUrl(self,furl,jsurl,max,path):
         size=max
