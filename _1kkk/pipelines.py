@@ -64,14 +64,12 @@ class downloadImage(threading.Thread):
         super().__init__()
     
     def put(self,items):
-        print("put")
         self.queue.put(items)
     
     def run(self):
         while True:
             items=self.queue.get()
             if(isinstance(items,KkkItem)):
-                print("into")
                 self.initManga(items)
             else:
                 break
@@ -429,7 +427,7 @@ class MangaDao:
 
     def updateMangaPageBykkkid(self,mangapage):
         conn=sqlite3.connect('./manga.db')
-        conn.execute("update mangapage set manid=%d,name='%s',size='%d',isbuckup='%d',ispush='%d' where kkkid=%d"%(mangapage.manid,mangapage.name,mangapage.size,mangapage.isbuckup,mangapage.ispush,mangapage.kkkid))
+        conn.execute("update mangapage set manid=%d,name='%s',size='%d',isbuckup='%d',ispush='%d' where kkkid=%s"%(mangapage.manid,mangapage.name,mangapage.size,mangapage.isbuckup,mangapage.ispush,mangapage.kkkid))
         conn.commit()
         conn.close()
 

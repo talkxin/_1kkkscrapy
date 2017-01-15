@@ -138,7 +138,7 @@ class ManSpider(scrapy.Spider):
         filepath="./tmp/image/%s/%s/"%(manga.id,ci.id)
         if os.path.exists(filepath) != True:
             os.makedirs(filepath)
-        if len(ci.page)!=length:
+        if len(ci.page)<length:
             page.id=pagesize
             page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
             ci.page.append(page)
@@ -172,10 +172,11 @@ class ManSpider(scrapy.Spider):
             else:
                 return ""
         except Exception as e:
+#                print("download error %s"%e)
                 self.driver.quit()
                 self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
                 self.driver.set_page_load_timeout(30)
                 self.driver.get(furl)
                 time.sleep(3)
-                return self.getImgUrl(furl,jsurl,size)
+                return self.getImgUrl(furl,jsurl,size,path)
 
