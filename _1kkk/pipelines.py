@@ -89,7 +89,6 @@ class downloadImage(threading.Thread):
         manga.author=items['author']
         self.db.updateManga(manga)
         for ci in items['chapter']:
-            print('into 1')
             mPage=MangaPage()
             mPage.manid=manga.id
             mPage.kkkid=ci.id
@@ -115,6 +114,10 @@ class downloadImage(threading.Thread):
                     msgRoot.attach(att)
                     self.smtp.sendmail(self.user.sendMail, self.user.kindleMail, msgRoot.as_string())
                     mPage.ispush=1
+                #向云盘备份mobi
+                if man.isbuckup==1:
+                    ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
+                
             with open("%s.zip"%epubpath, 'rb') as e:
                 #开始备份云盘与推送到kindle
                 if man.isbuckup==1:
