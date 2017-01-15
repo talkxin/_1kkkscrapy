@@ -98,8 +98,6 @@ class downloadImage(threading.Thread):
             filepath="./tmp/image/%s/%s/"%(mPage.manid,mPage.kkkid)
             #生成epub
             mPage.size=self.createEpub(manga,ci,filepath)
-            #注册该漫画已完成下载,入库
-            self.db.insertMangaPage(mPage)
             #获取该漫画的推送活保存权限
             man=self.db.getMangaByKkkid(manga.kkkid)
             epubpath="./tmp/image/%s/%s"%(manga.id,ci.id)
@@ -108,6 +106,8 @@ class downloadImage(threading.Thread):
                 if man.ispush==1:
                     msgRoot = MIMEMultipart('related')
                     msgRoot['Subject'] = mPage.kkkid
+                    msgRoot['From']=self.user.sendMail
+                    msgRoot['To']=self.user.kindleMail
                     att = MIMEText(e.read(), 'base64', 'utf-8')
                     att["Content-Type"] = 'application/octet-stream'
                     att["Content-Disposition"] = 'attachment; filename="%s.mobi"'%ci.id
@@ -125,9 +125,9 @@ class downloadImage(threading.Thread):
                 #向云盘备份mobi
                 if man.isbuckup==1:
                     ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
-            
-            #更新数据库状态
-            self.db.updateMangaPageBykkkid(mPage)
+            #注册该漫画已完成下载,入库
+            self.db.insertMangaPage(mPage)
+            #删除缓存文件
             os.remove("%s.mobi"%epubpath)
             os.remove("%s.zip"%epubpath)
 
