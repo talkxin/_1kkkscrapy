@@ -31,10 +31,11 @@ class KkkPipeline(object):
         #初始化队列文件
         self.man=downloadImage()
         self.man.start()
+        self.db=MangaDao()
     
     def close_spider(self, spider):
         self.man.put("out")
-    
+
     """
         每个漫画创建一个下载线程进行下载
         下载完成后生成epub格式的书籍进行备份
@@ -47,7 +48,20 @@ class KkkPipeline(object):
                 在小服务器的情况下会导致内存溢出的bug。
             v1.1改造为线程池根据服务器情况动态调整线程池的最大处理上线，来防止生成epub时导致内存溢出。
         """
-        self.man.put(item)
+        url=item['url']
+        manga=self.db.getMangaByUrl(url)
+        manga.kkkid=item['id']
+        manga.name=item['name']
+        manga.ci=item['chapter']
+        if manga.state!=None and manga.state!=0 and item['state']=="连载中":
+            manga.state=1
+        else:
+            manga.state=0
+            manga.type=item['type']
+            manga.time=item['time']
+            manga.author=item['author']
+            self.db.updateManga(manga)
+        self.man.put(manga)
         return item
 
 
@@ -58,9 +72,9 @@ class downloadImage(threading.Thread):
         #默认读取首位用户
         self.user=self.db.getUserbyID(1)
         
-        self.smtp = smtplib.SMTP()
-        self.smtp.connect(self.user.sendMail_smtp)
-        self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
+        #self.smtp = smtplib.SMTP()
+        #self.smtp.connect(self.user.sendMail_smtp)
+        #self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
 
         self.pcs = PCS(self.user.baiduname,self.user.baidupass)
         super().__init__()
@@ -71,26 +85,16 @@ class downloadImage(threading.Thread):
     def run(self):
         while True:
             items=self.queue.get()
-            if(isinstance(items,KkkItem)):
+            if(items!="out"):
                 self.initManga(items)
             else:
                 break
     
 
     def initManga(self,items):
-        url=items['url']
-        manga=self.db.getMangaByUrl(url)
-        manga.kkkid=items['id']
-        manga.name=items['name']
-        if items['state']=="连载中":
-            manga.state=1
-        else:
-            manga.state=0
-        manga.type=items['type']
-        manga.time=items['time']
-        manga.author=items['author']
-        self.db.updateManga(manga)
-        for ci in items['chapter']:
+        manga=items
+        for ci in manga.ci:
+            print("[[[[[["+ci.id+"]]]]]]")
             mPage=MangaPage()
             mPage.manid=manga.id
             mPage.kkkid=ci.id
@@ -99,7 +103,6 @@ class downloadImage(threading.Thread):
             mPage.ispush=0
             filepath="./tmp/image/%s/%s/"%(mPage.manid,mPage.kkkid)
             #生成epub
-            print(filepath)
             mPage.size=self.createEpub(manga,ci,filepath)
             #获取该漫画的推送活保存权限
             man=self.db.getMangaByKkkid(manga.kkkid)
@@ -123,21 +126,22 @@ class downloadImage(threading.Thread):
 #                print(e)
             
             try:
-                with open("%s.zip"%epubpath, 'rb') as e:
-                    #开始备份云盘与推送到kindle
-                    if man.isbuckup==1:
-                        ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.zip'%mPage.name)
-                        mPage.isbuckup=1
-                
-                with open("%s.mobi"%epubpath, 'rb') as e:
-                    #向云盘备份mobi
-                    if man.isbuckup==1:
-                        ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
+              with open("%s.zip"%epubpath, 'rb') as e:
+                  #开始备份云盘与推送到kindle
+                  if man.isbuckup==1:
+                      ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.zip'%mPage.name)
+                      mPage.isbuckup=1
+            
+              with open("%s.mobi"%epubpath, 'rb') as e:
+                  #向云盘备份mobi
+                  if man.isbuckup==1:
+                      ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
             except Exception as e:
-                print(e)
-            #注册该漫画已完成下载,入库
-            self.db.insertMangaPage(mPage)
-            #删除缓存文件
+               print("==================")
+               print(e)
+            # 注册该漫画已完成下载,入库
+            # self.db.insertMangaPage(mPage)
+            # 删除缓存文件
             os.remove("%s.mobi"%epubpath)
             os.remove("%s.zip"%epubpath)
 
@@ -238,6 +242,7 @@ class Manga:
     time=""
     isbuckup=1
     ispush=1
+    ci=None
 
 class MangaPage:
     hid=0
