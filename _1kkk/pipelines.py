@@ -94,7 +94,6 @@ class downloadImage(threading.Thread):
     def initManga(self,items):
         manga=items
         for ci in manga.ci:
-            print("[[[[[["+ci.id+"]]]]]]")
             mPage=MangaPage()
             mPage.manid=manga.id
             mPage.kkkid=ci.id
@@ -137,7 +136,6 @@ class downloadImage(threading.Thread):
                   if man.isbuckup==1:
                       ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
             except Exception as e:
-               print("==================")
                print(e)
             # 注册该漫画已完成下载,入库
             # self.db.insertMangaPage(mPage)

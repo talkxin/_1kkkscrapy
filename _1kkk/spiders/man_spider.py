@@ -11,6 +11,7 @@ from selenium import webdriver
 import urllib.request#python3
 import re
 import os
+import os.path
 import time
 import platform
 
@@ -138,16 +139,11 @@ class ManSpider(scrapy.Spider):
         filepath="./tmp/image/%s/%s/"%(manga.id,ci.id)
         if os.path.exists(filepath) != True:
             os.makedirs(filepath)
-        print(filepath)
-        print(length)
-        print(len(ci.page))
-        print("============")
         if len(ci.page)<length:
             page.id=pagesize
             page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
             ci.page.append(page)
         else:
-            print("into")
             page.id=pagesize
             page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
             ci.page.append(page)
@@ -157,10 +153,11 @@ class ManSpider(scrapy.Spider):
             yield item['item']
 
     def getImgUrl(self,furl,jsurl,max,path):
-        size=max
+        if os.path.exists(path):
+            return path
         try:
-            if size<5:
-                size=size+1
+            if max<5:
+                max=max+1
                 self.driver.get(jsurl)
                 js="""
                     var i;
@@ -179,10 +176,10 @@ class ManSpider(scrapy.Spider):
                 return ""
         except Exception as e:
 #                print("download error %s"%e)
-                self.driver.quit()
+                self.driver = None
                 self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
                 self.driver.set_page_load_timeout(30)
                 self.driver.get(furl)
                 time.sleep(3)
-                return self.getImgUrl(furl,jsurl,size,path)
+                return self.getImgUrl(furl,jsurl,max,path)
 
