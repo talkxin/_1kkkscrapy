@@ -138,7 +138,7 @@ class downloadImage(threading.Thread):
             except Exception as e:
                print(e)
             # 注册该漫画已完成下载,入库
-            # self.db.insertMangaPage(mPage)
+            self.db.insertMangaPage(mPage)
             # 删除缓存文件
             os.remove("%s.mobi"%epubpath)
             os.remove("%s.zip"%epubpath)
