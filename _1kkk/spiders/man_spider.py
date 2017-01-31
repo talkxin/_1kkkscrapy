@@ -114,7 +114,7 @@ class ManSpider(scrapy.Spider):
                 identifies=str(m.group(1))
                 id=str(m.group(2))
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page=1&key=&maxcount=10"
-                yield Request(purl,meta={'id': response.meta['id'],'chid':ci.id,'len':int(len)-1,'pagesize':1,'furl':furl}, callback=self.parse_each_page)
+                yield Request(purl,meta={'id': response.meta['id'],'chid':ci.id,'len':int(len)-1,'pagesize':1,'furl':furl}, callback=self.parse_each_page,errback=self.parse_each_page)
 
     """
         获取所有页面的js数据，并开始对js数据进行处理
