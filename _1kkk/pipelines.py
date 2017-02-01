@@ -134,7 +134,7 @@ class downloadImage(threading.Thread):
               with open("%s.mobi"%epubpath, 'rb') as e:
                   #向云盘备份mobi
                   if man.isbuckup==1:
-                      ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi.zip'%mPage.name)
+                      ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
             except Exception as e:
                print(e)
             # 注册该漫画已完成下载,入库

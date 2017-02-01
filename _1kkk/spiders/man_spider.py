@@ -26,6 +26,14 @@ class ManSpider(scrapy.Spider):
     name="manhua"
     start_urls=[]
     dao=MangaDao()
+    #    cap = webdriver.DesiredCapabilities.PHANTOMJS
+    #    cap["phantomjs.page.settings.resourceTimeout"] = 5000
+    #    cap["phantomjs.page.settings.userAgent"] = "faking it"
+    cap = webdriver.DesiredCapabilities.PHANTOMJS
+    cap["phantomjs.page.settings.loadImages"] = False
+    cap["phantomjs.page.settings.disk-cache"] = True
+    driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=cap)
+    driver.set_page_load_timeout(30)
     """
         获取数据库中所有需要爬取的漫画
     """
@@ -135,29 +143,25 @@ class ManSpider(scrapy.Spider):
             os.makedirs(filepath)
         if len(ci.page)<length:
             page.id=pagesize
-            page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id),None)
+            page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
             ci.page.append(page)
         else:
             page.id=pagesize
-            page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id),None)
+            page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
             ci.page.append(page)
             item['item']['chapter']=[ci]
 #            item['item']['chapter'].append(ci)
 #            if item['hualength']==len(item['item']['chapter']):
+            #清理一下driver内存
+            self.driver.quit()
+            self.driver = None
+            self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
+            self.driver.set_page_load_timeout(30)
             yield item['item']
 
-    def getImgUrl(self,furl,jsurl,max,path,driv):
+    def getImgUrl(self,furl,jsurl,max,path):
         if os.path.exists(path):
             return path
-        if driv==None:
-            #    cap = webdriver.DesiredCapabilities.PHANTOMJS
-            #    cap["phantomjs.page.settings.resourceTimeout"] = 5000
-            #    cap["phantomjs.page.settings.userAgent"] = "faking it"
-            cap = webdriver.DesiredCapabilities.PHANTOMJS
-            cap["phantomjs.page.settings.loadImages"] = False
-            cap["phantomjs.page.settings.disk-cache"] = True
-            self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=cap)
-            self.driver.set_page_load_timeout(30)
         try:
             if max<5:
                 max=max+1
@@ -174,20 +178,17 @@ class ManSpider(scrapy.Spider):
                 self.driver.execute_script(js)
                 imageurl=self.driver.find_element_by_id('__imgurl').text
                 urllib.request.urlretrieve(imageurl, path)
-                self.driver.quit()
+#                self.driver.quit()
                 return path
             else:
                 return ""
         except Exception as e:
 #                print("download error %s"%e)
                 self.driver = None
-                cap = webdriver.DesiredCapabilities.PHANTOMJS
-                cap["phantomjs.page.settings.loadImages"] = False
-                cap["phantomjs.page.settings.disk-cache"] = True
-                self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=cap)
+                self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
                 self.driver.set_page_load_timeout(30)
                 self.driver.get(furl)
                 time.sleep(3)
-                return self.getImgUrl(furl,jsurl,max,path,self.driver)
+                return self.getImgUrl(furl,jsurl,max,path)
                 return ""
 
