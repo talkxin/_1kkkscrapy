@@ -188,6 +188,6 @@ class ManSpider(scrapy.Spider):
                 self.driver.set_page_load_timeout(30)
                 self.driver.get(furl)
                 time.sleep(3)
-                return self.getImgUrl(furl,jsurl,max,path,driver)
+                return self.getImgUrl(furl,jsurl,max,path,self.driver)
                 return ""
 
