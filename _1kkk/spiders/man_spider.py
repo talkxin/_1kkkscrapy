@@ -184,11 +184,10 @@ class ManSpider(scrapy.Spider):
                 return ""
         except Exception as e:
 #                print("download error %s"%e)
+                self.driver.quit()
                 self.driver = None
                 self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
                 self.driver.set_page_load_timeout(30)
                 self.driver.get(furl)
                 time.sleep(3)
                 return self.getImgUrl(furl,jsurl,max,path)
-                return ""
-
