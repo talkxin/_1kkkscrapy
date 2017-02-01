@@ -135,13 +135,13 @@ class downloadImage(threading.Thread):
                   #向云盘备份mobi
                   if man.isbuckup==1:
                       ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
+              # 注册该漫画已完成下载,入库
+              self.db.insertMangaPage(mPage)
+              # 删除缓存文件
+              os.remove("%s.mobi"%epubpath)
+              os.remove("%s.zip"%epubpath)
             except Exception as e:
                print(e)
-            # 注册该漫画已完成下载,入库
-            self.db.insertMangaPage(mPage)
-            # 删除缓存文件
-            os.remove("%s.mobi"%epubpath)
-            os.remove("%s.zip"%epubpath)
 
 
 
