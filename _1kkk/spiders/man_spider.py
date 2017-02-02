@@ -89,7 +89,7 @@ class ManSpider(scrapy.Spider):
             url =response.urljoin(href)
             re1='.*?'+'\\d+'+'.*?'+'\\d+'+'.*?'+'(\\d+)'
             rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
-            m = rg.search(url)
+            m = rg.search(href)
             ci.id=m.group(1)
             """
                 过滤数据库中所有已经下载过的漫画
@@ -118,7 +118,7 @@ class ManSpider(scrapy.Spider):
                 furl=response.url
                 re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'+'.*?'+'(\\d+)'
                 rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
-                m = rg.search(response.url)
+                m = rg.search(furl)
                 identifies=str(m.group(1))
                 id=str(m.group(2))
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page=1&key=&maxcount=10"
