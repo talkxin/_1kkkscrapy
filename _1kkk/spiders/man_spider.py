@@ -57,10 +57,10 @@ class ManSpider(scrapy.Spider):
         item['id']=m.group(1)
         item['url']=response.url
         item['name']=response.xpath("//div[@class='sy_k21']/h1/text()").extract()[0]
-        item['state']=stats[1].xpath("font/text()").extract()[0]
-        """
-            暂时发现漫画类型和作者有可能为空
-        """
+        if stats[1]!=None and len(stats[1].xpath("font/text()").extract())!=0:
+            item['state']=stats[1].xpath("font/text()").extract()[0]
+        else:
+            item['state']="已完结"
         if stats[4]!=None and len(stats[4].xpath("a/text()").extract())!=0:
             item['type']=stats[4].xpath("a/text()").extract()[0]
         else:
@@ -87,10 +87,10 @@ class ManSpider(scrapy.Spider):
             ci.chid=hua.xpath("text()").extract()[0]
             href=hua.xpath("@href").extract()[0]
             url =response.urljoin(href)
-            re1='.*?'+'\\d+'+'.*?'+'\\d+'+'.*?'+'(\\d+)'
+            re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'+'.*?'+'(\\d+)'
             rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
-            m = rg.search(href)
-            ci.id=m.group(1)
+            m = rg.search(url)
+            ci.id=m.group(2)
             """
                 过滤数据库中所有已经下载过的漫画
             """
