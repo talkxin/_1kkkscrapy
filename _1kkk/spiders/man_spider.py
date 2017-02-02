@@ -106,7 +106,7 @@ class ManSpider(scrapy.Spider):
         for i in range(1,int(len)+1):
             if i!=1:
                 furl=str(response.url)[:-1]+"-p"+str(i)
-                re1='.*?'+'((?:[a-z][a-z]*[0-9]+[a-z0-9]*))'+'.*?'+'(\\d+)'+'.*?'+'(\\d+)'
+                re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'+'.*?'+'(\\d+)'
                 rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
                 m = rg.search(furl)
                 identifies=str(m.group(1))
@@ -116,7 +116,7 @@ class ManSpider(scrapy.Spider):
                 yield Request(purl,meta={'id': response.meta['id'],'chid':ci.id,'len':int(len)-1,'pagesize':size,'furl':furl}, callback=self.parse_each_page)
             else:
                 furl=response.url
-                re1='.*?'+'((?:[a-z][a-z]*[0-9]+[a-z0-9]*))'+'.*?'+'(\\d+)'
+                re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'+'.*?'+'(\\d+)'
                 rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
                 m = rg.search(response.url)
                 identifies=str(m.group(1))
