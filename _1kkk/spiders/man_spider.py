@@ -33,7 +33,7 @@ class ManSpider(scrapy.Spider):
     cap["phantomjs.page.settings.loadImages"] = False
     cap["phantomjs.page.settings.disk-cache"] = True
     driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=cap)
-#    driver.set_page_load_timeout(30)
+    driver.set_page_load_timeout(30)
     """
         获取数据库中所有需要爬取的漫画
     """
@@ -153,10 +153,10 @@ class ManSpider(scrapy.Spider):
 #            item['item']['chapter'].append(ci)
 #            if item['hualength']==len(item['item']['chapter']):
             #清理一下driver内存
-            self.driver.quit()
-            self.driver = None
-            self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
-            self.driver.set_page_load_timeout(30)
+#            self.driver.quit()
+#            self.driver = None
+#            self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
+#            self.driver.set_page_load_timeout(30)
             yield item['item']
 
     def getImgUrl(self,furl,jsurl,max,path):
@@ -187,7 +187,10 @@ class ManSpider(scrapy.Spider):
                 self.driver.quit()
                 self.driver = None
                 self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
-#                self.driver.set_page_load_timeout(30)
-                self.driver.get(furl)
+                self.driver.set_page_load_timeout(30)
+                try:
+                    self.driver.get(furl)
+                except Exception as e1:
+                    return ""
                 time.sleep(3)
                 return self.getImgUrl(furl,jsurl,max,path)
