@@ -77,7 +77,7 @@ class downloadImage(threading.Thread):
         #self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
 
         self.pcs = PCS(self.user.baiduname,self.user.baidupass)
-        while json.loads(self.pcs.quota().content.decode())['errno']!=-6:
+        while json.loads(self.pcs.quota().content.decode())['errno']==-6:
             time.sleep(3)
             self.pcs = PCS(self.user.baiduname,self.user.baidupass)
         super().__init__()
