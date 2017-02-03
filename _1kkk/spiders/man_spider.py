@@ -87,7 +87,7 @@ class ManSpider(scrapy.Spider):
             ci.chid=hua.xpath("text()").extract()[0]
             href=hua.xpath("@href").extract()[0]
             url =response.urljoin(href)
-            re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'+'.*?'+'(\\d+)'
+            re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'
             rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
             m = rg.search(url)
             ci.id=m.group(2)
