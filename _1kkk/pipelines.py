@@ -140,6 +140,8 @@ class downloadImage(threading.Thread):
               # 删除缓存文件
               os.remove("%s.mobi"%epubpath)
               os.remove("%s.zip"%epubpath)
+              #删除目录
+              shutil.rmtree(filepath)
             except Exception as e:
                print(e)
 
@@ -155,8 +157,6 @@ class downloadImage(threading.Thread):
         os.remove("%s.epub"%epubpath)
         #压缩path
         self.zip_dir(path,"%s.zip"%epubpath)
-        #删除目录
-        shutil.rmtree(path)
         return os.path.getsize("%s.mobi"%epubpath)
 #        book = epub.EpubBook()
 #        #绝对ID
