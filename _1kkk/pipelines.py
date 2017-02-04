@@ -57,10 +57,10 @@ class KkkPipeline(object):
             manga.state=1
         else:
             manga.state=0
-            manga.type=item['type']
-            manga.time=item['time']
-            manga.author=item['author']
-            self.db.updateManga(manga)
+        manga.type=item['type']
+        manga.time=item['time']
+        manga.author=item['author']
+        self.db.updateManga(manga)
         self.man.put(manga)
         return item
 
