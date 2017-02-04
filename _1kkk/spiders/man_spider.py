@@ -141,23 +141,21 @@ class ManSpider(scrapy.Spider):
         filepath="./tmp/image/%s/%s/"%(manga.id,ci.id)
         if os.path.exists(filepath) != True:
             os.makedirs(filepath)
-        if len(ci.page)<length:
-            page.id=pagesize
-            page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
-            ci.page.append(page)
-        else:
-            page.id=pagesize
-            page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
-            ci.page.append(page)
-            item['item']['chapter']=[ci]
+        try:
+            if len(ci.page)<length:
+                page.id=pagesize
+                page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
+                ci.page.append(page)
+            else:
+                page.id=pagesize
+                page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
+                ci.page.append(page)
+                item['item']['chapter']=[ci]
 #            item['item']['chapter'].append(ci)
 #            if item['hualength']==len(item['item']['chapter']):
-            #清理一下driver内存
-#            self.driver.quit()
-#            self.driver = None
-#            self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
-#            self.driver.set_page_load_timeout(30)
-            yield item['item']
+                yield item['item']
+        except Exception as e:
+            print(e)
 
     def getImgUrl(self,furl,jsurl,max,path):
         if os.path.exists(path):
@@ -188,9 +186,6 @@ class ManSpider(scrapy.Spider):
                 self.driver = None
                 self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
                 self.driver.set_page_load_timeout(30)
-                try:
-                    self.driver.get(furl)
-                except Exception as e1:
-                    return ""
+                self.driver.get(furl)
                 time.sleep(3)
                 return self.getImgUrl(furl,jsurl,max,path)
