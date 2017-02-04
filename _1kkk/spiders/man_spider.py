@@ -57,21 +57,35 @@ class ManSpider(scrapy.Spider):
         item['id']=m.group(1)
         item['url']=response.url
         item['name']=response.xpath("//div[@class='sy_k21']/h1/text()").extract()[0]
-        if stats[1]!=None and len(stats[1].xpath("font/text()").extract())!=0:
-            item['state']=stats[1].xpath("font/text()").extract()[0]
+        if  stats[0]==None or len(stats[0].xpath("font/text()").extract())==0:
+            if stats[1]!=None and len(stats[1].xpath("font/text()").extract())!=0:
+                item['state']=stats[1].xpath("font/text()").extract()[0]
+            else:
+                item['state']="已完结"
+            if stats[4]!=None and len(stats[4].xpath("a/text()").extract())!=0:
+                item['type']=stats[4].xpath("a/text()").extract()[0]
+            else:
+                item['type']="null"
+            if stats[2]!=None and len(stats[2].xpath("a/text()").extract())!=0:
+                item['author']=stats[2].xpath("a/text()").extract()[0]
+            else:
+                item['author']="null"
+            item['time']=stats[6].xpath("font/text()").extract()[0]
         else:
-            item['state']="已完结"
-        if stats[4]!=None and len(stats[4].xpath("a/text()").extract())!=0:
-            item['type']=stats[4].xpath("a/text()").extract()[0]
-        else:
-            item['type']="null"
-        if stats[2]!=None and len(stats[2].xpath("a/text()").extract())!=0:
-            item['author']=stats[2].xpath("a/text()").extract()[0]
-        else:
-            item['author']="null"
+            if stats[0]!=None and len(stats[1].xpath("font/text()").extract())!=0:
+                item['state']=stats[0].xpath("font/text()").extract()[0]
+            else:
+                item['state']="已完结"
+            if stats[3]!=None and len(stats[3].xpath("a/text()").extract())!=0:
+                item['type']=stats[3].xpath("a/text()").extract()[0]
+            else:
+                item['type']="null"
+            if stats[1]!=None and len(stats[1].xpath("a/text()").extract())!=0:
+                item['author']=stats[1].xpath("a/text()").extract()[0]
+            else:
+                item['author']="null"
+            item['time']=stats[5].xpath("font/text()").extract()[0]
         item['chapter']=[]
-        item['time']=stats[6].xpath("font/text()").extract()[0]
-#        print("into start: name:%s,state:%s,author:%s,time:%s"%(name,state,author,time))
         huas=response.xpath("//ul[@class='sy_nr1 cplist_ullg']/li/a")
         huasz=[]
         """
