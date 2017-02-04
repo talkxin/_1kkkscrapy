@@ -131,13 +131,13 @@ class downloadImage(threading.Thread):
               with open("%s.zip"%epubpath, 'rb') as e:
                   #开始备份云盘与推送到kindle
                   if man.isbuckup==1:
-                      ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.zip'%mPage.name)
+                      ret = self.pcs.upload('/manga/[%s]%s'%(manga.author,manga.name),e,'%s.zip'%mPage.name)
                       mPage.isbuckup=1
             
               with open("%s.mobi"%epubpath, 'rb') as e:
                   #向云盘备份mobi
                   if man.isbuckup==1:
-                      ret = self.pcs.upload('/manga/%s'%manga.name,e,'%s.mobi'%mPage.name)
+                      ret = self.pcs.upload('/manga/[%s]%s'%(manga.author,manga.name),e,'%s.mobi'%mPage.name)
               # 注册该漫画已完成下载,入库
               self.db.insertMangaPage(mPage)
               # 删除缓存文件
