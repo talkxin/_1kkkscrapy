@@ -72,9 +72,12 @@ class downloadImage(threading.Thread):
         #默认读取首位用户
         self.user=self.db.getUserbyID(1)
         
-        #self.smtp = smtplib.SMTP()
-        #self.smtp.connect(self.user.sendMail_smtp)
-        #self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
+        self.smtp = smtplib.SMTP()
+        self.smtp.connect(self.user.sendMail_smtp)
+        
+        #登陆smtp
+        if self.user.sendMail_username!=None and self.user.sendMail_username!="" and self.user.sendMail_password!=None and self.user.sendMail_password!="":
+            self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
 
         self.pcs = PCS(self.user.baiduname,self.user.baidupass)
         while json.loads(self.pcs.quota().content.decode())['errno']==-6:
@@ -109,23 +112,22 @@ class downloadImage(threading.Thread):
             #获取该漫画的推送活保存权限
             man=self.db.getMangaByKkkid(manga.kkkid)
             epubpath="./tmp/image/%s/%s"%(manga.id,ci.id)
-#            try:
-#                with open("%s.mobi"%epubpath, 'rb') as e:
-#                    #开始发送邮件
-#                    if man.ispush==1:
-#                        msgRoot = MIMEMultipart('related')
-#                        msgRoot['Subject'] = "%s[%s][%s][%s]"%(manga.name,ci.chid,manga.author,manga.type)
-#                        msgRoot['From']=self.user.sendMail
-#                        msgRoot['To']=self.user.kindleMail
-#                        att = MIMEText(e.read(), 'base64', 'utf-8')
-#                        att["Content-Type"] = 'application/octet-stream'
-#                        att["Content-Disposition"] = 'attachment; filename="%s.mobi"'%ci.id
-#                        msgRoot.attach(att)
-#                        self.smtp.sendmail(self.user.sendMail, self.user.kindleMail, msgRoot.as_string())
-#    #                        smtp.quit()
-#                        mPage.ispush=1
-#            except Exception as e:
-#                print(e)
+            try:
+                with open("%s.mobi"%epubpath, 'rb') as e:
+                    #开始发送邮件
+                    if man.ispush==1:
+                        msgRoot = MIMEMultipart('related')
+                        msgRoot['Subject'] = "%s[%s][%s][%s]"%(manga.name,ci.chid,manga.author,manga.type)
+                        msgRoot['From']=self.user.sendMail
+                        msgRoot['To']=self.user.kindleMail
+                        att = MIMEText(e.read(), 'base64', 'utf-8')
+                        att["Content-Type"] = 'application/octet-stream'
+                        att["Content-Disposition"] = 'attachment; filename="%s.mobi"'%ci.id
+                        msgRoot.attach(att)
+                        self.smtp.sendmail(self.user.sendMail, self.user.kindleMail, msgRoot.as_string())
+                        mPage.ispush=1
+            except Exception as e:
+                print(e)
             
             try:
               with open("%s.zip"%epubpath, 'rb') as e:
@@ -161,35 +163,6 @@ class downloadImage(threading.Thread):
         #压缩path
         self.zip_dir(path,"%s.zip"%epubpath)
         return os.path.getsize("%s.mobi"%epubpath)
-#        book = epub.EpubBook()
-#        #绝对ID
-#        book.set_identifier(ci.id)
-#        #书籍名称
-#        book.set_title("%s[%s][%s][%s]"%(manga.name,ci.chid,manga.author,manga.type))
-#        #语言
-#        book.set_language('en')
-#        #作者
-#        book.add_author('talkxin')
-#        book.spine=[]
-#        #封面
-#        book.set_cover("image.jpg",open('%s/1.jpg'%path, 'rb').read())
-#        toc=[]
-#        for i in range(1,len(ci.page)+1):
-#            itm = epub.EpubImage()
-#            itm.file_name ="%s.jpg"%i
-#            itm.content=open('%s/%s.jpg'%(path,i), 'rb').read()
-#            book.add_item(itm)
-#            toc.append(epub.Link("%s.jpg"%i,"p%s"%i,"p%s"%i))
-#            book.spine.append(itm)
-#            os.remove('%s/%s.jpg'%(path,i))
-#        #目录
-#        book.toc = (toc)
-#        book.add_item(epub.EpubNcx())
-#        book.add_item(epub.EpubNav())
-#        #路径
-#        path="./tmp/image/%s/%s.epub"%(manga.id,ci.id)
-#        epub.write_epub(path, book, {})
-#        return os.path.getsize(path)
 
     def zip_dir(self,dirname,zipfilename):
         filelist = []
@@ -204,14 +177,6 @@ class downloadImage(threading.Thread):
             arcname = tar[len(dirname):]
             zf.write(tar,arcname)
         zf.close()
-
-    def compressionMobi(self,path,ci):
-#        os.popen('./bin/kindlegen_mac_i386_v2_9 %s/%s.epub -c2'%(path,ci.id)).readlines()
-        #进行压缩
-        data=open('%s/%s.mobi'%(path,ci.id), 'rb').read()
-        os.remove('%s/%s.mobi'%(path,ci.id))
-        out=SRCSStripper(data)
-        open('%s/%s-1.mobi'%(path,ci.id),'wb').write(out.getResult())
 
 
 
@@ -259,7 +224,7 @@ class MangaDao:
         conn=sqlite3.connect('./manga.db')
         create="""
             CREATE TABLE IF NOT EXISTS 'user' ('id' INTEGER PRIMARY KEY,'kindleMail' VARCHAR,'sendMail' VARCHAR,'sendMail_smtp' VARCHAR,'sendMail_username' VARCHAR, 'sendMail_password' VARCHAR,'baiduname' VARCHAR,'baidupass' VARCHAR);
-            CREATE TABLE IF NOT EXISTS 'manga' ('id' INTEGER PRIMARY KEY,'kkkid' INTEGER DEFAULT '0', pageurl VARCHAR, 'name' VARCHAR, 'state' INTEGER DEFAULT '1', 'type' VARCHAR, 'author' VARCHAR, 'time' VARCHAR, 'isbuckup' INTEGER DEFAULT '1', 'ispush' INTEGER DEFAULT '1');
+            CREATE TABLE IF NOT EXISTS 'manga' ('id' INTEGER PRIMARY KEY,'kkkid' INTEGER DEFAULT '0', pageurl VARCHAR, 'name' VARCHAR, 'state' INTEGER DEFAULT '1', 'type' VARCHAR, 'author' VARCHAR, 'time' VARCHAR, 'isbuckup' INTEGER DEFAULT '1', 'ispush' INTEGER DEFAULT '0');
             CREATE TABLE IF NOT EXISTS 'mangapage' ('hid' INTEGER PRIMARY KEY, 'manid' INTEGER,'kkkid' VARCHAR, 'name' VARCHAR, 'size' INTEGER, 'isbuckup' INTEGER, 'ispush' INTEGER);
             """
         conn.executescript(create)
@@ -530,125 +495,4 @@ class MangaDao:
         max=data[0][0]
         conn.close()
         return max
-
-class SRCSStripper:
-    data_file=b""
-    def sec_info(self, secnum):
-        start_offset, flgval = struct.unpack_from('>2L', self.datain, 78+(secnum*8))
-        if secnum == self.num_sections:
-            next_offset = len(self.datain)
-        else:
-            next_offset, nflgval = struct.unpack_from('>2L', self.datain, 78+((secnum+1)*8))
-        return start_offset, flgval, next_offset
-
-    def loadSection(self, secnum):
-        start_offset, tval, next_offset = self.sec_info(secnum)
-        return self.datain[start_offset: next_offset]
-
-
-    def __init__(self, datain):
-        if datain[0x3C:0x3C+8] != b'BOOKMOBI':
-            return None
-        self.datain = datain
-        self.num_sections, = struct.unpack('>H', datain[76:78])
-
-        # get mobiheader
-        mobiheader = self.loadSection(0)
-
-        # get SRCS section number and count
-        self.srcs_secnum, self.srcs_cnt = struct.unpack_from('>2L', mobiheader, 0xe0)
-        if self.srcs_secnum == 0xffffffff or self.srcs_cnt == 0:
-            raise StripException("File doesn't contain the sources section.")
-
-        # store away srcs sections in case the user wants them later
-        self.srcs_headers = []
-        self.srcs_data = []
-        for i in range(self.srcs_secnum, self.srcs_secnum + self.srcs_cnt):
-            data = self.loadSection(i)
-            self.srcs_headers.append(data[0:16])
-            self.srcs_data.append(data[16:])
-
-        # find its SRCS region starting offset and total length
-        self.srcs_offset, fval, temp2 = self.sec_info(self.srcs_secnum)
-        next = self.srcs_secnum + self.srcs_cnt
-        next_offset, temp1, temp2 = self.sec_info(next)
-        self.srcs_length = next_offset - self.srcs_offset
-
-        if self.datain[self.srcs_offset:self.srcs_offset+4] != b'SRCS':
-            return None
-
-        # first write out the number of sections
-        self.data_file = self.datain[:76]
-        self.data_file = self.joindata(self.data_file, struct.pack('>H',self.num_sections))
-
-        # we are going to make the SRCS section lengths all  be 0
-        # offsets up to and including the first srcs record must not be changed
-        last_offset = -1
-        for i in range(self.srcs_secnum+1):
-            offset, flgval, temp  = self.sec_info(i)
-            last_offset = offset
-            self.data_file = self.joindata(self.data_file, struct.pack('>L',offset) + struct.pack('>L',flgval))
-            # print "section: %d, offset %0x, flgval %0x" % (i, offset, flgval)
-
-        # for every additional record in SRCS records set start to last_offset (they are all zero length)
-        for i in range(self.srcs_secnum + 1, self.srcs_secnum + self.srcs_cnt):
-            temp1, flgval, temp2 = self.sec_info(i)
-            self.data_file = self.joindata(self.data_file, struct.pack('>L',last_offset) + struct.pack('>L',flgval))
-            # print "section: %d, offset %0x, flgval %0x" % (i, last_offset, flgval)
-
-        # for every record after the SRCS records we must start it earlier by an amount
-        # equal to the total length of all of the SRCS section
-        delta = 0 - self.srcs_length
-        for i in range(self.srcs_secnum + self.srcs_cnt , self.num_sections):
-            offset, flgval, temp = self.sec_info(i)
-            offset += delta
-            self.data_file = self.joindata(self.data_file, struct.pack('>L',offset) + struct.pack('>L',flgval))
-            # print "section: %d, offset %0x, flgval %0x" % (i, offset, flgval)
-
-        # now pad it out to begin right at the first offset
-        # typically this is 2 bytes of nulls
-        first_offset, flgval = struct.unpack_from('>2L', self.data_file, 78)
-        self.data_file = self.joindata(self.data_file, '\0' * (first_offset - len(self.data_file)))
-
-        # now add on every thing up to the original src_offset and then everything after it
-        dout = []
-        dout.append(self.data_file)
-        dout.append(self.datain[first_offset: self.srcs_offset])
-        dout.append(self.datain[self.srcs_offset+self.srcs_length:])
-        self.data_file = b"".join(dout)
-
-        # update the srcs_secnum and srcs_cnt in the new mobiheader
-        offset0, flgval0 = struct.unpack_from('>2L', self.data_file, 78)
-        offset1, flgval1 = struct.unpack_from('>2L', self.data_file, 86)
-        mobiheader = self.data_file[offset0:offset1]
-        mobiheader = mobiheader[:0xe0]+ struct.pack('>L', 0xffffffff) + struct.pack('>L', 0) + mobiheader[0xe8:]
-        self.data_file = self.patchdata(self.data_file, offset0, mobiheader)
-        return None
-
-    def getResult(self):
-        return self.data_file
-
-    def getStrippedData(self):
-        return self.srcs_data
-
-    def getHeader(self):
-        return self.srcs_headers
-
-    def joindata(self,datain, new):
-        dout=[]
-        if(isinstance(datain,str)):
-            datain=bytes(datain,'utf-8')
-        if(isinstance(new,str)):
-            new=bytes(new,'utf-8')
-        dout.append(datain)
-        dout.append(new)
-        return b''.join(dout)
-
-    def patchdata(self,datain, off, new):
-        dout=[]
-        dout.append(datain[:off])
-        dout.append(new)
-        dout.append(datain[off+len(new):])
-        return b''.join(dout)
-
 
