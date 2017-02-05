@@ -126,7 +126,7 @@ class ManSpider(scrapy.Spider):
                 id=str(m.group(2))
                 size=str(m.group(3))
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page="+size+"&key=&maxcount=10"
-                self.parse_each_page(response.meta['id'],ci,int(len)-1,size,furl,purl)
+                yield self.parse_each_page(response.meta['id'],ci,int(len)-1,size,furl,purl)
             else:
                 furl=response.url
                 re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'+'.*?'+'(\\d+)'
@@ -135,7 +135,7 @@ class ManSpider(scrapy.Spider):
                 identifies=str(m.group(1))
                 id=str(m.group(2))
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page=1&key=&maxcount=10"
-                self.parse_each_page(response.meta['id'],ci,int(len)-1,1,furl,purl)
+                yield self.parse_each_page(response.meta['id'],ci,int(len)-1,1,furl,purl)
 
     def parse_each_page(self,id,ci,length,pagesize,furl,jsurl):
         item=self.items[id]
