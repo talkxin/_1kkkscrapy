@@ -186,7 +186,7 @@ class ManSpider(scrapy.Spider):
 
     def getImgUrl(self,furl,jsurl,max,path):
         requests.get(furl)
-        myheaders = copy.copy(headers)
+        myheaders = copy.copy(self.headers)
         myheaders['Referer'] = furl
         r1 = requests.get(jsurl, headers=myheaders)
         with PyV8.JSContext() as ctxt:
