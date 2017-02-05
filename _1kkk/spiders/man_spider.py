@@ -137,7 +137,7 @@ class ManSpider(scrapy.Spider):
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page=1&key=&maxcount=10"
                 self.parse_each_page(response.meta['id'],ci,int(len)-1,1,furl,purl)
 
-    def parse_each_page(self,id,ci,length,pagesize,furl,jsurl)
+    def parse_each_page(self,id,ci,length,pagesize,furl,jsurl):
         item=self.items[id]
         manga=self.dao.getMangaByUrl(item['item']['url'])
         page=Page()
