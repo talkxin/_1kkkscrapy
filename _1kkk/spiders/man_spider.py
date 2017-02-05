@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 import scrapy
 from scrapy.selector import Selector
@@ -9,7 +10,7 @@ from _1kkk.pipelines import MangaDao
 from _1kkk.pipelines import Manga
 #from selenium import webdriver
 import copy
-import PyV8
+import execjs
 import requests
 import urllib.request#python3
 import re
@@ -189,18 +190,9 @@ class ManSpider(scrapy.Spider):
         myheaders = copy.copy(self.headers)
         myheaders['Referer'] = furl
         r1 = requests.get(jsurl, headers=myheaders)
-        
-        print("------------")
-        print(furl)
-        print(jsurl)
-        
-        with PyV8.JSContext() as ctxt:
-            ctxt.enter()
-            func = ctxt.eval(r1.text[4:])
-            func2 = ctxt.eval(func)
-
-        html = str(func2).split(',')[0]
-        r = requests.get(html, headers=myheaders)
+        func = ctxt.eval(r1.text[4:])
+        func2 = execjs.compile(func).call("dm5imagefun")[0]
+        r = requests.get(func2, headers=myheaders)
         with open(path, 'wb') as f:
             f.write(r.content)
         return path
