@@ -186,13 +186,15 @@ class ManSpider(scrapy.Spider):
     def getImgUrl(self,furl,jsurl,path):
         if os.path.exists(path):
             return path
-        requests.get(furl)
+#        requests.get(furl)
         myheaders = copy.copy(self.headers)
         myheaders['Referer'] = furl
         r1 = requests.get(jsurl, headers=myheaders)
         func = execjs.eval(r1.text[4:])
         func2 = execjs.compile(func).call("dm5imagefun")[0]
-        urllib.request.urlretrieve(func2, path)
+        r = requests.get(func2, headers=myheaders)
+        with open(path, 'wb') as f:
+            f.write(r.content)
         return path
 #    def getImgUrl(self,furl,jsurl,max,path):
 #        if os.path.exists(path):
