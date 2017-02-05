@@ -72,12 +72,15 @@ class downloadImage(threading.Thread):
         #默认读取首位用户
         self.user=self.db.getUserbyID(1)
         
-        self.smtp = smtplib.SMTP()
-        self.smtp.connect(self.user.sendMail_smtp)
-        
-        #登陆smtp
-        if self.user.sendMail_username!=None and self.user.sendMail_username!="" and self.user.sendMail_password!=None and self.user.sendMail_password!="":
-            self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
+        try:
+            self.smtp = smtplib.SMTP()
+            self.smtp.connect(self.user.sendMail_smtp)
+
+            #登陆smtp
+            if self.user.sendMail_username!=None and self.user.sendMail_username!="" and self.user.sendMail_password!=None and self.user.sendMail_password!="":
+                self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
+        except Exception as e:
+            print(e)
 
         self.pcs = PCS(self.user.baiduname,self.user.baidupass)
         while json.loads(self.pcs.quota().content.decode())['errno']==-6:
