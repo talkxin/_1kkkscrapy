@@ -149,7 +149,7 @@ class ManSpider(scrapy.Spider):
                 identifies=str(m.group(1))
                 id=str(m.group(2))
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page=1&key=&maxcount=10"
-                yield Request(purl,meta={'id': response.meta['id'],'chid':ci.id,'len':int(len)-1,'pagesize':1,'furl':furl}, callback=self.parse_each_page,errback=self.parse_each_page)
+                yield Request(furl,meta={'id': response.meta['id'],'chid':ci.id,'len':int(len)-1,'pagesize':1,'furl':purl}, callback=self.parse_each_page,errback=self.parse_each_page)
 
     """
         获取所有页面的js数据，并开始对js数据进行处理
@@ -170,11 +170,11 @@ class ManSpider(scrapy.Spider):
         try:
             if len(ci.page)<length:
                 page.id=pagesize
-                page.imageurl=self.getImgUrl(furl,response.url,'%s/%s.jpg'%(filepath,page.id))
+                page.imageurl=self.getImgUrl(response.url,furl,'%s/%s.jpg'%(filepath,page.id))
                 ci.page.append(page)
             else:
                 page.id=pagesize
-                page.imageurl=self.getImgUrl(furl,response.url,'%s/%s.jpg'%(filepath,page.id))
+                page.imageurl=self.getImgUrl(response.url,furl,'%s/%s.jpg'%(filepath,page.id))
                 ci.page.append(page)
                 item['item']['chapter']=[ci]
 #            item['item']['chapter'].append(ci)
@@ -186,7 +186,7 @@ class ManSpider(scrapy.Spider):
     def getImgUrl(self,furl,jsurl,path):
         if os.path.exists(path):
             return path
-#        requests.get(furl)
+        requests.get(furl)
         myheaders = copy.copy(self.headers)
         myheaders['Referer'] = furl
         r1 = requests.get(jsurl, headers=myheaders)
