@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import scrapy
 from scrapy.selector import Selector
@@ -8,6 +7,7 @@ from _1kkk.items import Chapter
 from _1kkk.items import Page
 from _1kkk.pipelines import MangaDao
 from _1kkk.pipelines import Manga
+#from selenium import webdriver
 import copy
 import execjs
 import requests
@@ -16,10 +16,16 @@ import re
 import os
 import os.path
 import time
+#import platform
 
 class ManSpider(scrapy.Spider):
     
     global phantomjspath
+#    sysstr = platform.system()
+#    if sysstr == "Linux":
+#        phantomjspath='./bin/phantomjs_linux'
+#    else:
+#        phantomjspath='./bin/phantomjs_mac'
     name="manhua"
     start_urls=[]
     dao=MangaDao()
@@ -33,6 +39,14 @@ class ManSpider(scrapy.Spider):
                 'Connection': 'keep-alive',
                 'Cache-Control': 'no-cache'
                 }
+    #    cap = webdriver.DesiredCapabilities.PHANTOMJS
+    #    cap["phantomjs.page.settings.resourceTimeout"] = 5000
+    #    cap["phantomjs.page.settings.userAgent"] = "faking it"
+#    cap = webdriver.DesiredCapabilities.PHANTOMJS
+#    cap["phantomjs.page.settings.loadImages"] = False
+#    cap["phantomjs.page.settings.disk-cache"] = True
+#    driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=cap)
+#    driver.set_page_load_timeout(120)
     """
         获取数据库中所有需要爬取的漫画
     """
@@ -45,10 +59,10 @@ class ManSpider(scrapy.Spider):
     #所有的章节
     chids={}
     def parse(self, response):
-        re1='.*?'	# Non-greedy match on filler
-        re2='\\d+'	# Uninteresting: int
-        re3='.*?'	# Non-greedy match on filler
-        re4='(\\d+)'	# Integer Number 1
+        re1='.*?'   # Non-greedy match on filler
+        re2='\\d+'  # Uninteresting: int
+        re3='.*?'   # Non-greedy match on filler
+        re4='(\\d+)'    # Integer Number 1
         rg = re.compile(re1+re2+re3+re4,re.IGNORECASE|re.DOTALL)
         m = rg.search(response.url)
         stats=response.xpath("//ul[@class='sy_k22 z ma3 mt5']/li")
@@ -126,7 +140,7 @@ class ManSpider(scrapy.Spider):
                 id=str(m.group(2))
                 size=str(m.group(3))
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page="+size+"&key=&maxcount=10"
-                yield self.parse_each_page(response.meta['id'],ci,int(len)-1,size,furl,purl)
+                yield Request(purl,meta={'id': response.meta['id'],'chid':ci.id,'len':int(len)-1,'pagesize':size,'furl':furl}, callback=self.parse_each_page)
             else:
                 furl=response.url
                 re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'+'.*?'+'(\\d+)'
@@ -135,11 +149,20 @@ class ManSpider(scrapy.Spider):
                 identifies=str(m.group(1))
                 id=str(m.group(2))
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page=1&key=&maxcount=10"
-                yield self.parse_each_page(response.meta['id'],ci,int(len)-1,1,furl,purl)
+                yield Request(furl,meta={'id': response.meta['id'],'chid':ci.id,'len':int(len)-1,'pagesize':1,'furl':purl}, callback=self.parse_each_page,errback=self.parse_each_page)
 
-    def parse_each_page(self,id,ci,length,pagesize,furl,jsurl):
-        item=self.items[id]
+    """
+        获取所有页面的js数据，并开始对js数据进行处理
+        若出现超时或报错，则对父页面进行重新拉取刷新，并暂停3秒钟再次尝试拉取
+        每个页面尝试3次，超过3次的均返回为空
+    """
+    def parse_each_page(self,response):
+        item=self.items[response.meta['id']]
         manga=self.dao.getMangaByUrl(item['item']['url'])
+        ci=self.chids[response.meta['chid']]
+        length=response.meta['len']
+        pagesize=response.meta['pagesize']
+        furl=response.meta['furl']
         page=Page()
         filepath="./tmp/image/%s/%s/"%(manga.id,ci.id)
         if os.path.exists(filepath) != True:
@@ -147,13 +170,15 @@ class ManSpider(scrapy.Spider):
         try:
             if len(ci.page)<length:
                 page.id=pagesize
-                page.imageurl=self.getImgUrl(furl,jsurl,'%s/%s.jpg'%(filepath,page.id))
+                page.imageurl=self.getImgUrl(response.url,furl,'%s/%s.jpg'%(filepath,page.id))
                 ci.page.append(page)
             else:
                 page.id=pagesize
-                page.imageurl=self.getImgUrl(furl,jsurl,'%s/%s.jpg'%(filepath,page.id))
+                page.imageurl=self.getImgUrl(response.url,furl,'%s/%s.jpg'%(filepath,page.id))
                 ci.page.append(page)
                 item['item']['chapter']=[ci]
+#            item['item']['chapter'].append(ci)
+#            if item['hualength']==len(item['item']['chapter']):
                 yield item['item']
         except Exception as e:
             print(e)
@@ -169,3 +194,35 @@ class ManSpider(scrapy.Spider):
         func2 = execjs.compile(func).call("dm5imagefun")[0]
         urllib.request.urlretrieve(func2, path)
         return path
+#    def getImgUrl(self,furl,jsurl,max,path):
+#        if os.path.exists(path):
+#            return path
+#        try:
+#            if max<5:
+#                max=max+1
+#                self.driver.get(jsurl)
+#                js="""
+#                    var i;
+#                    i=document.body.innerText;
+#                    i=eval(i);
+#                    var p = document.createElement("div");
+#                    p.setAttribute("id","__imgurl");
+#                    p.innerHTML=i[0];
+#                    document.body.insertBefore(p, document.body.firstChild);
+#                    """
+#                self.driver.execute_script(js)
+#                imageurl=self.driver.find_element_by_id('__imgurl').text
+#                urllib.request.urlretrieve(imageurl, path)
+##                self.driver.quit()
+#                return path
+#            else:
+#                return ""
+#        except Exception as e:
+##                print("download error %s"%e)
+#                self.driver.quit()
+#                self.driver = None
+#                self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
+#                self.driver.set_page_load_timeout(120)
+#                self.driver.get(furl)
+#                time.sleep(3)
+#                return self.getImgUrl(furl,jsurl,max,path)
