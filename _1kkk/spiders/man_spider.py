@@ -171,11 +171,11 @@ class ManSpider(scrapy.Spider):
         try:
             if len(ci.page)<length:
                 page.id=pagesize
-                page.imageurl=self.getImgUrl(furl,response.url,page.id,filepath)
+                page.imageurl=self.getImgUrl(furl,response.url,'%s/%s.jpg'%(filepath,page.id))
                 ci.page.append(page)
             else:
                 page.id=pagesize
-                page.imageurl=self.getImgUrl(furl,response.url,page.id,filepath)
+                page.imageurl=self.getImgUrl(furl,response.url,'%s/%s.jpg'%(filepath,page.id))
                 ci.page.append(page)
                 item['item']['chapter']=[ci]
 #            item['item']['chapter'].append(ci)
@@ -184,7 +184,7 @@ class ManSpider(scrapy.Spider):
         except Exception as e:
             print(e)
 
-    def getImgUrl(self,furl,jsurl,max,path):
+    def getImgUrl(self,furl,jsurl,path):
         requests.get(furl)
         myheaders = copy.copy(self.headers)
         myheaders['Referer'] = furl
@@ -195,9 +195,9 @@ class ManSpider(scrapy.Spider):
             func2 = ctxt.eval(func)
         html = str(func2).split(',')[0]
         r = requests.get(html, headers=myheaders)
-        with open(os.path.join(path, '%s.jpg'%max), 'wb') as f:
+        with open(path, 'wb') as f:
             f.write(r.content)
-        return '%s/%s.jpg'%(path,max)
+        return path
 #    def getImgUrl(self,furl,jsurl,max,path):
 #        if os.path.exists(path):
 #            return path
