@@ -10,6 +10,7 @@ from _1kkk.pipelines import Manga
 #from selenium import webdriver
 import copy
 import PyV8
+import requests
 import urllib.request#python3
 import re
 import os
