@@ -186,6 +186,8 @@ class ManSpider(scrapy.Spider):
             print(e)
 
     def getImgUrl(self,furl,jsurl,path):
+        if os.path.exists(path):
+            return path
         requests.get(furl)
         myheaders = copy.copy(self.headers)
         myheaders['Referer'] = furl
