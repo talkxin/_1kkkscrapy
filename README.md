@@ -3,7 +3,7 @@
 	apt-get install -y wget vim gcc g++ git lrzsz build-essential libxml2 libxml2-dev openssl libssl-dev libffi-dev libtiff5-dev libjpeg8-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev libfontconfig python python-dev python3 python3-dev python-setuptools python3-setuptools python3-pip python3-openssl python3-dev python3-pip libxml2-dev libxslt1-dev zlib1g-dev libffi-dev libssl-dev
 
 1、安装scrapy及所需的python库：
-	pip3 install pip pyasn1 cryptography python-slugify Pillow psutil selenium requests_toolbelt rsa scrapy --upgrade
+	pip3 install pip PyExecJS pyasn1 cryptography python-slugify Pillow psutil selenium requests_toolbelt rsa scrapy --upgrade
 	
 2、下载项目：
 	git clone https://github.com/talkxin/_1kkkscrapy.git
