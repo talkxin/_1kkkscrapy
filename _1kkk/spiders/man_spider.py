@@ -7,33 +7,45 @@ from _1kkk.items import Chapter
 from _1kkk.items import Page
 from _1kkk.pipelines import MangaDao
 from _1kkk.pipelines import Manga
-from selenium import webdriver
+#from selenium import webdriver
+import copy
+import PyV8
 import urllib.request#python3
 import re
 import os
 import os.path
 import time
-import platform
+#import platform
 
 class ManSpider(scrapy.Spider):
     
     global phantomjspath
-    sysstr = platform.system()
-    if sysstr == "Linux":
-        phantomjspath='./bin/phantomjs_linux'
-    else:
-        phantomjspath='./bin/phantomjs_mac'
+#    sysstr = platform.system()
+#    if sysstr == "Linux":
+#        phantomjspath='./bin/phantomjs_linux'
+#    else:
+#        phantomjspath='./bin/phantomjs_mac'
     name="manhua"
     start_urls=[]
     dao=MangaDao()
+    headers = {'Pragma': 'no-cache',
+                'DNT': '1',
+                'Accept-Encoding': 'gzip, deflate, sdch',
+                'Accept-Language': 'zh-CN,zh;q=0.8,en;q=0.6,zh-TW;q=0.4',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.103 Safari/537.36',
+                'Accept': 'image/webp,image/*,*/*;q=0.8',
+                'Referer': 'http://www.1kkk.com/ch1-116859/',
+                'Connection': 'keep-alive',
+                'Cache-Control': 'no-cache'
+                }
     #    cap = webdriver.DesiredCapabilities.PHANTOMJS
     #    cap["phantomjs.page.settings.resourceTimeout"] = 5000
     #    cap["phantomjs.page.settings.userAgent"] = "faking it"
-    cap = webdriver.DesiredCapabilities.PHANTOMJS
-    cap["phantomjs.page.settings.loadImages"] = False
-    cap["phantomjs.page.settings.disk-cache"] = True
-    driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=cap)
-    driver.set_page_load_timeout(120)
+#    cap = webdriver.DesiredCapabilities.PHANTOMJS
+#    cap["phantomjs.page.settings.loadImages"] = False
+#    cap["phantomjs.page.settings.disk-cache"] = True
+#    driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=cap)
+#    driver.set_page_load_timeout(120)
     """
         获取数据库中所有需要爬取的漫画
     """
@@ -158,11 +170,11 @@ class ManSpider(scrapy.Spider):
         try:
             if len(ci.page)<length:
                 page.id=pagesize
-                page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
+                page.imageurl=self.getImgUrl(furl,response.url,page.id,filepath)
                 ci.page.append(page)
             else:
                 page.id=pagesize
-                page.imageurl=self.getImgUrl(furl,response.url,0,'%s/%s.jpg'%(filepath,page.id))
+                page.imageurl=self.getImgUrl(furl,response.url,page.id,filepath)
                 ci.page.append(page)
                 item['item']['chapter']=[ci]
 #            item['item']['chapter'].append(ci)
@@ -172,34 +184,48 @@ class ManSpider(scrapy.Spider):
             print(e)
 
     def getImgUrl(self,furl,jsurl,max,path):
-        if os.path.exists(path):
-            return path
-        try:
-            if max<5:
-                max=max+1
-                self.driver.get(jsurl)
-                js="""
-                    var i;
-                    i=document.body.innerText;
-                    i=eval(i);
-                    var p = document.createElement("div");
-                    p.setAttribute("id","__imgurl");
-                    p.innerHTML=i[0];
-                    document.body.insertBefore(p, document.body.firstChild);
-                    """
-                self.driver.execute_script(js)
-                imageurl=self.driver.find_element_by_id('__imgurl').text
-                urllib.request.urlretrieve(imageurl, path)
+        requests.get(furl)
+        myheaders = copy.copy(headers)
+        myheaders['Referer'] = furl
+        r1 = requests.get(jsurl, headers=myheaders)
+        with PyV8.JSContext() as ctxt:
+            ctxt.enter()
+            func = ctxt.eval(r1.text[4:])
+            func2 = ctxt.eval(func)
+        html = str(func2).split(',')[0]
+        r = requests.get(html, headers=myheaders)
+        with open(os.path.join(path, '%s.jpg'%max), 'wb') as f:
+            f.write(r.content)
+        return '%s/%s.jpg'%(path,max)
+#    def getImgUrl(self,furl,jsurl,max,path):
+#        if os.path.exists(path):
+#            return path
+#        try:
+#            if max<5:
+#                max=max+1
+#                self.driver.get(jsurl)
+#                js="""
+#                    var i;
+#                    i=document.body.innerText;
+#                    i=eval(i);
+#                    var p = document.createElement("div");
+#                    p.setAttribute("id","__imgurl");
+#                    p.innerHTML=i[0];
+#                    document.body.insertBefore(p, document.body.firstChild);
+#                    """
+#                self.driver.execute_script(js)
+#                imageurl=self.driver.find_element_by_id('__imgurl').text
+#                urllib.request.urlretrieve(imageurl, path)
+##                self.driver.quit()
+#                return path
+#            else:
+#                return ""
+#        except Exception as e:
+##                print("download error %s"%e)
 #                self.driver.quit()
-                return path
-            else:
-                return ""
-        except Exception as e:
-#                print("download error %s"%e)
-                self.driver.quit()
-                self.driver = None
-                self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
-                self.driver.set_page_load_timeout(120)
-                self.driver.get(furl)
-                time.sleep(3)
-                return self.getImgUrl(furl,jsurl,max,path)
+#                self.driver = None
+#                self.driver = webdriver.PhantomJS(executable_path=phantomjspath,desired_capabilities=self.cap)
+#                self.driver.set_page_load_timeout(120)
+#                self.driver.get(furl)
+#                time.sleep(3)
+#                return self.getImgUrl(furl,jsurl,max,path)
