@@ -189,14 +189,16 @@ class ManSpider(scrapy.Spider):
         myheaders = copy.copy(self.headers)
         myheaders['Referer'] = furl
         r1 = requests.get(jsurl, headers=myheaders)
-        with PyV8.JSContext() as ctxt:
-            ctxt.enter()
-            func = ctxt.eval(r1.text[4:])
-            func2 = ctxt.eval(func)
         
         print("------------")
         print(furl)
         print(jsurl)
+        
+        with PyV8.JSContext() as ctxt:
+            ctxt.enter()
+            func = ctxt.eval(r1.text[4:])
+            func2 = ctxt.eval(func)
+
         html = str(func2).split(',')[0]
         r = requests.get(html, headers=myheaders)
         with open(path, 'wb') as f:
