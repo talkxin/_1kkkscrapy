@@ -166,7 +166,7 @@ class ManSpider(scrapy.Spider):
         page=Page()
         filepath="./tmp/image/%s/%s/"%(manga.id,ci.id)
         if os.path.exists(filepath) != True:
-        os.makedirs(filepath)
+            os.makedirs(filepath)
         if len(ci.page)<length:
             page.id=pagesize
             page.imageurl=self.getImgUrl(response.url,furl,'%s/%s.jpg'%(filepath,page.id))
