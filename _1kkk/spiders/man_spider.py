@@ -15,6 +15,7 @@ import re
 import os
 import os.path
 import time
+import logger
 
 class ManSpider(scrapy.Spider):
     
