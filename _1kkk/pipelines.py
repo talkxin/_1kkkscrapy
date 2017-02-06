@@ -7,7 +7,6 @@
 import re
 import os,os.path
 import zipfile
-#import requests
 import threading
 import queue
 import time
@@ -18,8 +17,6 @@ import shutil
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-#from libs import ebooklib
-#from _1kkk.libs.ebooklib.ebooklib import epub
 from _1kkk.libs.kcc.kcc.comic2ebook import createKVBook
 from _1kkk.libs.baidupcsapi.baidupcsapi import PCS
 from _1kkk.items import KkkItem
