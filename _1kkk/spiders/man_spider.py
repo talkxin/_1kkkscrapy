@@ -186,7 +186,7 @@ class ManSpider(scrapy.Spider):
                 f.write(r.content)
             return path
         except Exception as e:
-            logging.warning(str(e.message))
+            logging.warning(str(e))
             time.sleep(3)
             self.getImgUrl(furl,jsurl,path)
 
