@@ -80,7 +80,10 @@ class ManSpider(scrapy.Spider):
             else:
                 item['type']="null"
             if stats[2]!=None and len(stats[2].xpath("a/text()").extract())!=0:
-                item['author']=stats[2].xpath("a/text()").extract()[0]
+                str=""
+                for at in stats[1].xpath("a/text()").extract():
+                    str+=at+" "
+                item['author']=str
             else:
                 item['author']="null"
             item['time']=stats[6].xpath("font/text()").extract()[0]
@@ -94,7 +97,10 @@ class ManSpider(scrapy.Spider):
             else:
                 item['type']="null"
             if stats[1]!=None and len(stats[1].xpath("a/text()").extract())!=0:
-                item['author']=stats[1].xpath("a/text()").extract()[0]
+                str=""
+                for at in stats[1].xpath("a/text()").extract():
+                    str+=at+" "
+                item['author']=str
             else:
                 item['author']="null"
             item['time']=stats[5].xpath("font/text()").extract()[0]
