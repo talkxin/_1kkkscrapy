@@ -67,7 +67,7 @@ class ManSpider(scrapy.Spider):
                 item['type']="null"
             if stats[2]!=None and len(stats[2].xpath("a/text()").extract())!=0:
                 str=""
-                for at in stats[1].xpath("a/text()").extract():
+                for at in stats[2].xpath("a/text()").extract():
                     str+=at+" "
                 item['author']=str
             else:
