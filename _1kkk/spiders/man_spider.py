@@ -69,7 +69,7 @@ class ManSpider(scrapy.Spider):
                 str=""
                 for at in stats[2].xpath("a/text()").extract():
                     str+=at+" "
-            item['author']=str[:-1]
+                item['author']=str[:-1]
             else:
                 item['author']="null"
             item['time']=stats[6].xpath("font/text()").extract()[0]
