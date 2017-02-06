@@ -103,6 +103,8 @@ class ManSpider(scrapy.Spider):
         for hua in huasz:
             ci=Chapter()
             ci.chid=hua.xpath("text()").extract()[0]
+            if(self.verify(ci.chid[1:-1]):
+               ci.chid="%s%0*d%s"%(ci.chid[:1],3,int(ci.chid[1:-1]),ci.chid[-1:])
             href=hua.xpath("@href").extract()[0]
             url =response.urljoin(href)
             re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'
@@ -186,3 +188,9 @@ class ManSpider(scrapy.Spider):
             logger.warning(str(e.message))
             time.sleep(3)
             self.getImgUrl(furl,jsurl,path)
+
+    def verify(self,num):
+        try:
+            return (False, True)[round(float(num)) == float(num)]
+        except Exception as e:
+            return False
