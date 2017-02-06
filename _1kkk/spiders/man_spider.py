@@ -140,7 +140,9 @@ class ManSpider(scrapy.Spider):
                 id=str(m.group(2))
                 size=str(m.group(3))
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page="+size+"&key=&maxcount=10"
-                yield Request(furl,meta={'id': response.meta['id'],'chid':ci.id,'len':int(len)-1,'pagesize':size,'furl':purl}, callback=self.parse_each_page)
+                if not self.parse_each_page(response.meta['id'],ci,int(len)-1,size,furl,purl):
+                    yield self.items[response.meta['id']]['item']
+#                yield Request(furl,meta={'id': response.meta['id'],'chid':ci.id,'len':int(len)-1,'pagesize':size,'furl':purl}, callback=self.parse_each_page)
             else:
                 furl=response.url
                 re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'+'.*?'+'(\\d+)'
@@ -149,36 +151,40 @@ class ManSpider(scrapy.Spider):
                 identifies=str(m.group(1))
                 id=str(m.group(2))
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page=1&key=&maxcount=10"
-                yield Request(furl,meta={'id': response.meta['id'],'chid':ci.id,'len':int(len)-1,'pagesize':1,'furl':purl}, callback=self.parse_each_page,errback=self.parse_each_page)
+                if not self.parse_each_page(response.meta['id'],ci,int(len)-1,1,furl,purl):
+                    yield self.items[response.meta['id']]['item']
+#                yield Request(furl,meta={'id': response.meta['id'],'chid':ci.id,'len':int(len)-1,'pagesize':1,'furl':purl}, callback=self.parse_each_page,errback=self.parse_each_page)
 
     """
         获取所有页面的js数据，并开始对js数据进行处理
         若出现超时或报错，则对父页面进行重新拉取刷新，并暂停3秒钟再次尝试拉取
         每个页面尝试3次，超过3次的均返回为空
     """
-    def parse_each_page(self,response):
-        item=self.items[response.meta['id']]
+    def parse_each_page(self,id,ci,length,pagesize,furl,purl):
+        item=self.items[id]
         manga=self.dao.getMangaByUrl(item['item']['url'])
-        ci=self.chids[response.meta['chid']]
-        length=response.meta['len']
-        pagesize=response.meta['pagesize']
-        furl=response.meta['furl']
+#        ci=self.chids[response.meta['chid']]
+#        length=response.meta['len']
+#        pagesize=response.meta['pagesize']
+#        furl=response.meta['furl']
         page=Page()
         filepath="./tmp/image/%s/%s/"%(manga.id,ci.id)
         if os.path.exists(filepath) != True:
             os.makedirs(filepath)
         if len(ci.page)<length:
             page.id=pagesize
-            page.imageurl=self.getImgUrl(response.url,furl,'%s/%s.jpg'%(filepath,page.id))
+            page.imageurl=self.getImgUrl(furl,purl,'%s/%s.jpg'%(filepath,page.id))
             ci.page.append(page)
+            return True
         else:
             page.id=pagesize
-            page.imageurl=self.getImgUrl(response.url,furl,'%s/%s.jpg'%(filepath,page.id))
+            page.imageurl=self.getImgUrl(furl,purl,'%s/%s.jpg'%(filepath,page.id))
             ci.page.append(page)
             item['item']['chapter']=[ci]
+            return False
 #            item['item']['chapter'].append(ci)
 #            if item['hualength']==len(item['item']['chapter']):
-            yield item['item']
+#            yield item['item']
 
     def getImgUrl(self,furl,jsurl,path):
         try:
@@ -195,7 +201,7 @@ class ManSpider(scrapy.Spider):
                 f.write(r.content)
             return path
         except Exception as e:
-            print(e)
+            logger.warning(str(e.message))
             time.sleep(3)
             self.getImgUrl(furl,jsurl,path)
 #    def getImgUrl(self,furl,jsurl,max,path):
