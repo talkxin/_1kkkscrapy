@@ -166,36 +166,38 @@ class ManSpider(scrapy.Spider):
         page=Page()
         filepath="./tmp/image/%s/%s/"%(manga.id,ci.id)
         if os.path.exists(filepath) != True:
-            os.makedirs(filepath)
-        try:
-            if len(ci.page)<length:
-                page.id=pagesize
-                page.imageurl=self.getImgUrl(response.url,furl,'%s/%s.jpg'%(filepath,page.id))
-                ci.page.append(page)
-            else:
-                page.id=pagesize
-                page.imageurl=self.getImgUrl(response.url,furl,'%s/%s.jpg'%(filepath,page.id))
-                ci.page.append(page)
-                item['item']['chapter']=[ci]
+        os.makedirs(filepath)
+        if len(ci.page)<length:
+            page.id=pagesize
+            page.imageurl=self.getImgUrl(response.url,furl,'%s/%s.jpg'%(filepath,page.id))
+            ci.page.append(page)
+        else:
+            page.id=pagesize
+            page.imageurl=self.getImgUrl(response.url,furl,'%s/%s.jpg'%(filepath,page.id))
+            ci.page.append(page)
+            item['item']['chapter']=[ci]
 #            item['item']['chapter'].append(ci)
 #            if item['hualength']==len(item['item']['chapter']):
-                yield item['item']
-        except Exception as e:
-            print(e)
+            yield item['item']
 
     def getImgUrl(self,furl,jsurl,path):
-        if os.path.exists(path):
+        try:
+            if os.path.exists(path):
+                return path
+            requests.get(furl)
+            myheaders = copy.copy(self.headers)
+            myheaders['Referer'] = furl
+            r1 = requests.get(jsurl, headers=myheaders)
+            func = execjs.eval(r1.text[4:])
+            func2 = execjs.compile(func).call("dm5imagefun")[0]
+            r = requests.get(func2, headers=myheaders)
+            with open(path, 'wb') as f:
+                f.write(r.content)
             return path
-        requests.get(furl)
-        myheaders = copy.copy(self.headers)
-        myheaders['Referer'] = furl
-        r1 = requests.get(jsurl, headers=myheaders)
-        func = execjs.eval(r1.text[4:])
-        func2 = execjs.compile(func).call("dm5imagefun")[0]
-        r = requests.get(func2, headers=myheaders)
-        with open(path, 'wb') as f:
-            f.write(r.content)
-        return path
+        except Exception as e:
+            print(e)
+            time.sleep(3)
+            self.getImgUrl(furl,jsurl,path)
 #    def getImgUrl(self,furl,jsurl,max,path):
 #        if os.path.exists(path):
 #            return path
