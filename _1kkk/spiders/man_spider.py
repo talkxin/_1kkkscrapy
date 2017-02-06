@@ -104,7 +104,7 @@ class ManSpider(scrapy.Spider):
         for hua in huasz:
             ci=Chapter()
             ci.chid=hua.xpath("text()").extract()[0]
-            if(self.verify(ci.chid[1:-1]):
+            if self.verify(ci.chid[1:-1]:
                ci.chid="%s%0*d%s"%(ci.chid[:1],3,int(ci.chid[1:-1]),ci.chid[-1:])
             href=hua.xpath("@href").extract()[0]
             url =response.urljoin(href)
