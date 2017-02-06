@@ -116,33 +116,25 @@ class ManSpider(scrapy.Spider):
                 过滤数据库中所有已经下载过的漫画
             """
             if self.dao.getMangaPageByKkkid(ci.id)==None:
-                yield Request(url,meta={'id': item['id'],'chid':ci}, callback=self.parse_each_chapter)
+                yield Request(url,meta={'id': item['id'],'chid':ci,'href':href}, callback=self.parse_each_chapter)
 
 
     def parse_each_chapter(self, response):
         ci=response.meta['chid']
         ci.page=[]
         self.chids[ci.id]=ci
+        href=response.meta['href']
         len=response.xpath("//font[@class='zf40']/span[last()]/text()").extract()[0]
+        id=href.split('-')[-1][:-1]
+        identifies=href[1:href.find(id)-1]
         for i in range(1,int(len)+1):
             if i!=1:
                 furl=str(response.url)[:-1]+"-p"+str(i)
-                re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'+'.*?'+'(\\d+)'
-                rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
-                m = rg.search(furl)
-                identifies=str(m.group(1))
-                id=str(m.group(2))
-                size=str(m.group(3))
-                purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page="+size+"&key=&maxcount=10"
-                if not self.parse_each_page(response.meta['id'],ci,int(len)-1,size,furl,purl):
+                purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page="+str(i)+"&key=&maxcount=10"
+                if not self.parse_each_page(response.meta['id'],ci,int(len)-1,i,furl,purl):
                     yield self.items[response.meta['id']]['item']
             else:
                 furl=response.url
-                re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'
-                rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
-                m = rg.search(furl)
-                identifies=str(m.group(1))
-                id=str(m.group(2))
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page=1&key=&maxcount=10"
                 if not self.parse_each_page(response.meta['id'],ci,int(len)-1,1,furl,purl):
                     yield self.items[response.meta['id']]['item']
