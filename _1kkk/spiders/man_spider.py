@@ -138,7 +138,7 @@ class ManSpider(scrapy.Spider):
                     yield self.items[response.meta['id']]['item']
             else:
                 furl=response.url
-                re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'+'.*?'+'(\\d+)'
+                re1='.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'(?:[a-z][a-z0-9_]*)'+'.*?'+'((?:[a-z][a-z0-9_]*))'+'.*?'+'(\\d+)'
                 rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
                 m = rg.search(furl)
                 identifies=str(m.group(1))
