@@ -21,6 +21,8 @@ from _1kkk.libs.kcc.kcc.comic2ebook import createKVBook
 from _1kkk.libs.baidupcsapi.baidupcsapi import PCS
 from _1kkk.items import KkkItem
 import json
+import logging
+
 
 class KkkPipeline(object):
     
@@ -142,18 +144,19 @@ class downloadImage(threading.Thread):
                             #删除临时文件
                             os.remove("%s.txt"%epubpath)
             except Exception as e:
-                print(e)
-            
+                logging.warning(str(e))
+
             try:
                 if man.isbuckup==1:
+                    logging.info("into cloud")
                     with open("%s.zip"%epubpath, 'rb') as e:
                         #向云盘备份图片源文件打包zip
-                        ret = self.pcs.upload('/manga/%s[%s][%s]/zip'%(manga.name,manga.author,manga.type),e,'%s.zip'%mPage.name)
+                        ret = self.pcs.upload('/manga/[%s][%s]%s/zip'%(manga.type,manga.author,manga.name),e,'%s.zip'%mPage.name)
                         mPage.isbuckup=1
             
                     with open("%s.mobi"%epubpath, 'rb') as e:
                         #向云盘备份mobi
-                        ret = self.pcs.upload('/manga/%s[%s][%s]/mobi'%(manga.name,manga.author,manga.type),e,'%s.mobi'%mPage.name)
+                        ret = self.pcs.upload('/manga/[%s][%s]%s/mobi'%(manga.type,manga.author,manga.name),e,'%s.mobi'%mPage.name)
             
                 # 注册该漫画已完成下载,入库
                 self.db.insertMangaPage(mPage)
@@ -163,7 +166,7 @@ class downloadImage(threading.Thread):
                 #删除目录
                 shutil.rmtree(filepath)
             except Exception as e:
-                print(e)
+                logging.warning(str(e))
 
 
 
@@ -254,7 +257,7 @@ class MangaDao:
 
     def deleteUser(self,user):
         conn=sqlite3.connect('./manga.db')
-        conn.execute("delete user where id=%d"%user.id)
+        conn.execute("delete from user where id=%d"%user.id)
         conn.commit()
         conn.close()
 
@@ -321,7 +324,7 @@ class MangaDao:
 
     def delete(self,manga):
         conn=sqlite3.connect('./manga.db')
-        conn.execute("delete manga where id=%d"%manga.id)
+        conn.execute("delete from manga where id=%d"%manga.id)
         conn.commit()
         conn.close()
 
@@ -434,13 +437,13 @@ class MangaDao:
 
     def deleteMangaPage(self,mangapage):
         conn=sqlite3.connect('./manga.db')
-        conn.execute("delete mangapage where hid=%d"%mangapage.hid)
+        conn.execute("delete from mangapage where hid=%d"%mangapage.hid)
         conn.commit()
         conn.close()
 
     def deleteMangaPageByMan(self,mangapage):
         conn=sqlite3.connect('./manga.db')
-        conn.execute("delete mangapage where manid=%d"%mangapage.manid)
+        conn.execute("delete from mangapage where manid=%d"%mangapage.manid)
         conn.commit()
         conn.close()
 
