@@ -21,6 +21,8 @@ from _1kkk.libs.kcc.kcc.comic2ebook import createKVBook
 from _1kkk.libs.baidupcsapi.baidupcsapi import PCS
 from _1kkk.items import KkkItem
 import json
+import logging
+
 
 class KkkPipeline(object):
     
@@ -142,10 +144,11 @@ class downloadImage(threading.Thread):
                             #删除临时文件
                             os.remove("%s.txt"%epubpath)
             except Exception as e:
-                print(e)
-            
+                logging.warning(str(e))
+
             try:
                 if man.isbuckup==1:
+                    logging.info("into cloud")
                     with open("%s.zip"%epubpath, 'rb') as e:
                         #向云盘备份图片源文件打包zip
                         ret = self.pcs.upload('/manga/[%s][%s]%s/zip'%(manga.type,manga.author,manga.name),e,'%s.zip'%mPage.name)
@@ -163,7 +166,7 @@ class downloadImage(threading.Thread):
                 #删除目录
                 shutil.rmtree(filepath)
             except Exception as e:
-                print(e)
+                logging.warning(str(e))
 
 
 
