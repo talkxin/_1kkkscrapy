@@ -32,7 +32,7 @@ class KkkPipeline(object):
         self.man=downloadImage()
         self.man.start()
         self.db=MangaDao()
-        for i in self.data.getNotBackupManga():
+        for i in self.db.getNotBackupManga():
             self.man.put(i)
     
     
@@ -534,6 +534,7 @@ class MangaDao:
         conn=sqlite3.connect('./manga.db')
         cursor=conn.execute("select t2.*,t1.name,t1.kkkid from mangapage as t1 left join manga as t2 on t2.id=t1.manid where t2.isbuckup=1 and t1.isbuckup=0")
         items=[]
+        data=cursor.fetchall()
         for i in data:
             manga=Manga()
             manga.id=i[0]
