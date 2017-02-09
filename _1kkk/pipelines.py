@@ -20,6 +20,7 @@ from email.mime.text import MIMEText
 from _1kkk.libs.kcc.kcc.comic2ebook import createKVBook
 from _1kkk.libs.baidupcsapi.baidupcsapi import PCS
 from _1kkk.items import KkkItem
+from _1kkk.items import Chapter
 import json
 import logging
 
@@ -31,6 +32,9 @@ class KkkPipeline(object):
         self.man=downloadImage()
         self.man.start()
         self.db=MangaDao()
+        for i in self.data.getNotBackupManga():
+            self.man.put(i)
+    
     
     def close_spider(self, spider):
         self.man.put("out")
@@ -109,6 +113,11 @@ class downloadImage(threading.Thread):
             mPage.isbuckup=0
             mPage.ispush=0
             filepath="./tmp/image/%s/%s/"%(mPage.manid,mPage.kkkid)
+            #目录不存在
+            if not os.path.exists(filepath):
+                #删除数据库条目，尝试再次下载
+                self.db.deleteMangaPageBykkkid(mPage)
+                return
             #生成epub
             mPage.size=self.createEpub(manga,ci,filepath)
             #获取该漫画的推送活保存权限
@@ -158,17 +167,18 @@ class downloadImage(threading.Thread):
                         #向云盘备份mobi
                         ret = self.pcs.upload('/manga/[%s][%s]%s/mobi'%(manga.type,manga.author,manga.name),e,'%s.mobi'%mPage.name)
             
-                # 注册该漫画已完成下载,入库
-                self.db.insertMangaPage(mPage)
+                    logging.info("end cloud")
                 # 删除缓存文件
                 os.remove("%s.mobi"%epubpath)
                 os.remove("%s.zip"%epubpath)
                 #删除目录
                 shutil.rmtree(filepath)
+    
             except Exception as e:
                 logging.warning(str(e))
 
-
+            # 注册该漫画已完成下载,入库
+            self.db.insertMangaPage(mPage)
 
 
     def createEpub(self,manga,ci,path):
@@ -446,6 +456,12 @@ class MangaDao:
         conn.execute("delete from mangapage where manid=%d"%mangapage.manid)
         conn.commit()
         conn.close()
+    
+    def deleteMangaPageBykkkid(self,mangapage):
+        conn=sqlite3.connect('./manga.db')
+        conn.execute("delete from mangapage where kkkid=%s"%mangapage.kkkid)
+        conn.commit()
+        conn.close()
 
     def getMangaPageByid(self,id):
         conn=sqlite3.connect('./manga.db')
@@ -513,4 +529,28 @@ class MangaDao:
         max=data[0][0]
         conn.close()
         return max
+
+    def getNotBackupManga(self):
+        conn=sqlite3.connect('./manga.db')
+        cursor=conn.execute("select t2.*,t1.name,t1.kkkid from mangapage as t1 left join manga as t2 on t2.id=t1.manid where t2.isbuckup=1 and t1.isbuckup=0")
+        items=[]
+        for i in data:
+            manga=Manga()
+            manga.id=i[0]
+            manga.kkkid=i[1]
+            manga.pageurl=i[2]
+            manga.name=i[3]
+            manga.state=i[4]
+            manga.type=i[5]
+            manga.author=i[6]
+            manga.time=i[7]
+            manga.isbuckup=i[8]
+            manga.ispush=i[9]
+            ci=Chapter()
+            ci.chid=i[10]
+            ci.id=i[11]
+            manga.ci=[ci]
+            items.append(manga)
+        conn.close()
+        return items
 
