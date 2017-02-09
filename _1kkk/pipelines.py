@@ -120,6 +120,10 @@ class downloadImage(threading.Thread):
                 return
             #生成epub
             mPage.size=self.createEpub(manga,ci,filepath)
+            
+            # 注册该漫画已生成mobi,入库
+            self.db.insertMangaPage(mPage)
+            
             #获取该漫画的推送活保存权限
             man=self.db.getMangaByKkkid(manga.kkkid)
             epubpath="./tmp/image/%s/%s"%(manga.id,ci.id)
@@ -152,6 +156,8 @@ class downloadImage(threading.Thread):
                             mPage.ispush=0
                             #删除临时文件
                             os.remove("%s.txt"%epubpath)
+                            #修改属性
+                            self.db.updateMangaPageBykkkid(mPage)
             except Exception as e:
                 logging.warning(str(e))
 
@@ -173,12 +179,10 @@ class downloadImage(threading.Thread):
                 os.remove("%s.zip"%epubpath)
                 #删除目录
                 shutil.rmtree(filepath)
-    
+                #修改属性
+                self.db.updateMangaPageBykkkid(mPage)
             except Exception as e:
                 logging.warning(str(e))
-
-            # 注册该漫画已完成下载,入库
-            self.db.insertMangaPage(mPage)
 
 
     def createEpub(self,manga,ci,path):
