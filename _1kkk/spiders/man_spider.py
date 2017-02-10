@@ -16,10 +16,13 @@ import os
 import os.path
 import time
 import logging
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 
 class ManSpider(scrapy.Spider):
     
     global phantomjspath
+    executor = ThreadPoolExecutor(max_workers=5)
     name="manhua"
     start_urls=[]
     dao=MangaDao()
@@ -127,17 +130,24 @@ class ManSpider(scrapy.Spider):
         len=response.xpath("//font[@class='zf40']/span[last()]/text()").extract()[0]
         id=href.split('-')[-1][:-1]
         identifies=href[1:href.find(id)-1]
+        queue=[]
         for i in range(1,int(len)+1):
             if i!=1:
                 furl=str(response.url)[:-1]+"-p"+str(i)
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page="+str(i)+"&key=&maxcount=10"
-                if not self.parse_each_page(response.meta['id'],ci,int(len)-1,i,furl,purl):
-                    yield self.items[response.meta['id']]['item']
+                queue.append(self.executor.submit(self.parse_each_page,response.meta['id'],ci,int(len)-1,i,furl,purl))
+#                if not self.parse_each_page(response.meta['id'],ci,int(len)-1,i,furl,purl):
+#                    yield self.items[response.meta['id']]['item']
             else:
                 furl=response.url
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page=1&key=&maxcount=10"
-                if not self.parse_each_page(response.meta['id'],ci,int(len)-1,1,furl,purl):
-                    yield self.items[response.meta['id']]['item']
+                queue.append(self.executor.submit(self.parse_each_page,response.meta['id'],ci,int(len)-1,1,furl,purl))
+#                if not self.parse_each_page(response.meta['id'],ci,int(len)-1,1,furl,purl):
+#                    yield self.items[response.meta['id']]['item']
+        for o in as_completed(queue):
+            if o.result()>=int(len):
+                self.items[response.meta['id']]['item']['chapter']=[self.chids[ci.id]]
+                yield self.items[response.meta['id']]['item']
 
     """
         获取所有页面的js数据，并开始对js数据进行处理
@@ -147,21 +157,25 @@ class ManSpider(scrapy.Spider):
     def parse_each_page(self,id,ci,length,pagesize,furl,purl):
         item=self.items[id]
         manga=self.dao.getMangaByUrl(item['item']['url'])
-        page=Page()
+        rp=Page()
         filepath="./tmp/image/%s/%s/"%(manga.id,ci.id)
-        if os.path.exists(filepath) != True:
-            os.makedirs(filepath)
-        if len(ci.page)<length:
-            page.id=pagesize
-            page.imageurl=self.getImgUrl(furl,purl,'%s/%s.jpg'%(filepath,page.id))
-            ci.page.append(page)
-            return True
-        else:
-            page.id=pagesize
-            page.imageurl=self.getImgUrl(furl,purl,'%s/%s.jpg'%(filepath,page.id))
-            ci.page.append(page)
-            item['item']['chapter']=[ci]
-            return False
+        try:
+            if not os.path.exists(filepath):
+                os.makedirs(filepath)
+        except Exception as e:
+            logging.warning(str(e))
+        
+#        if len(ci.page)<length:
+        rp.id=pagesize
+        rp.imageurl=self.getImgUrl(furl,purl,'%s/%s.jpg'%(filepath,rp.id))
+        self.chids[ci.id].page.append(rp)
+        return len(self.chids[ci.id].page)
+#        else:
+#            page.id=pagesize
+#            page.imageurl=self.getImgUrl(furl,purl,'%s/%s.jpg'%(filepath,page.id))
+#            self.chids[ci.id].page.append(page)
+#            item['item']['chapter']=[self.chids[ci.id]]
+#            return False
 
     def getImgUrl(self,furl,jsurl,path):
         try:
