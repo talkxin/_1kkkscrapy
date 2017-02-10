@@ -547,7 +547,7 @@ class PCS(BaseClass):
 
         url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
         return self._request('file', 'upload', url=url, extra_params=params,
-                             files=files, callback=callback, **kwargs)
+                             files=files, callback=callback,timeout=60*60, **kwargs)
 
     def upload_tmpfile(self, file_handler, callback=None, **kwargs):
         """分片上传—文件分片及上传.
