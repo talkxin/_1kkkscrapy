@@ -21,6 +21,8 @@ from _1kkk.libs.kcc.kcc.comic2ebook import createKVBook
 from _1kkk.libs.baidupcsapi.baidupcsapi import PCS
 from _1kkk.items import KkkItem
 from _1kkk.items import Chapter
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 import json
 import logging
 
@@ -29,15 +31,37 @@ class KkkPipeline(object):
     
     def open_spider(self, spider):
         #初始化队列文件
-        self.man=downloadImage()
-        self.man.start()
+        self.executor = ThreadPoolExecutor(max_workers=3)
+        self.tq=[]
         self.db=MangaDao()
+        #默认读取首位用户
+        self.user=self.db.getUserbyID(1)
+        
+        try:
+            self.smtp = smtplib.SMTP()
+            self.smtp.connect(self.user.sendMail_smtp)
+            
+            #登陆smtp
+            if self.user.sendMail_username!=None and self.user.sendMail_username!="" and self.user.sendMail_password!=None and self.user.sendMail_password!="":
+                self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
+        except Exception as e:
+            logging.warning(str(e))
+        
+        self.pcs = PCS(self.user.baiduname,self.user.baidupass)
+        while json.loads(self.pcs.quota().content.decode())['errno']==-6:
+            time.sleep(3)
+            self.pcs = PCS(self.user.baiduname,self.user.baidupass)
+
+        #添加未完成的队列
         for i in self.db.getNotBackupManga():
-            self.man.put(i)
+            q=self.executor.submit(downloadImage(self.user,self.pcs,self.smtp).initManga(i))
+            self.tq.append(q)
     
     
     def close_spider(self, spider):
-        self.man.put("out")
+        for i in self.tq:
+            print(i)
+#        self.man.put("out")
 
     """
         每个漫画创建一个下载线程进行下载
@@ -64,44 +88,28 @@ class KkkPipeline(object):
         manga.time=item['time']
         manga.author=item['author']
         self.db.updateManga(manga)
-        self.man.put(manga)
+        q=self.executor.submit(downloadImage(self.user,self.pcs,self.smtp).initManga(manga))
+        self.tq.append(q)
         return item
 
 
-class downloadImage(threading.Thread):
-    def __init__(self):
+class downloadImage():
+    def __init__(self,user,pcs,smtp):
         self.db=MangaDao()
-        self.queue=queue.Queue(0)
-        #默认读取首位用户
-        self.user=self.db.getUserbyID(1)
-        
-        try:
-            self.smtp = smtplib.SMTP()
-            self.smtp.connect(self.user.sendMail_smtp)
-
-            #登陆smtp
-            if self.user.sendMail_username!=None and self.user.sendMail_username!="" and self.user.sendMail_password!=None and self.user.sendMail_password!="":
-                self.smtp.login(self.user.sendMail_username, self.user.sendMail_password)
-        except Exception as e:
-            print(e)
-
-        self.pcs = PCS(self.user.baiduname,self.user.baidupass)
-        while json.loads(self.pcs.quota().content.decode())['errno']==-6:
-            time.sleep(3)
-            self.pcs = PCS(self.user.baiduname,self.user.baidupass)
-        super().__init__()
+        self.user=user
+        self.pcs=pcs
+        self.smtp=smtp
     
-    def put(self,items):
-        self.queue.put(items)
-    
-    def run(self):
-        while True:
-            items=self.queue.get()
-            if(items!="out"):
-                self.initManga(items)
-            else:
-                break
-    
+#    def put(self,items):
+#        self.queue.put(items)
+#    
+#    def run(self):
+#        while True:
+#            items=self.queue.get()
+#            if(items!="out"):
+#                self.initManga(items)
+#            else:
+#                break
 
     def initManga(self,items):
         manga=items
