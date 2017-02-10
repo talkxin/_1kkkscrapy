@@ -176,14 +176,14 @@ class downloadImage(threading.Thread):
                     with open("%s.zip"%epubpath, 'rb') as e:
                         #向云盘备份图片源文件打包zip
                         logging.info("start upload %s zip"%manga.name)
-                        ret = self.pcs.upload('/manga1/[%s][%s]%s/zip'%(manga.type,manga.author,manga.name),e,'%s.zip'%mPage.name)
+                        ret = self.pcs.upload('/manga/[%s][%s]%s/zip'%(manga.type,manga.author,manga.name),e,'%s.zip'%mPage.name)
                         logging.info("end upload %s zip"%manga.name)
                         mPage.isbuckup=1
             
                     with open("%s.mobi"%epubpath, 'rb') as e:
                         #向云盘备份mobi
                         logging.info("start upload %s mobi"%manga.name)
-                        ret = self.pcs.upload('/manga1/[%s][%s]%s/mobi'%(manga.type,manga.author,manga.name),e,'%s.mobi'%mPage.name)
+                        ret = self.pcs.upload('/manga/[%s][%s]%s/mobi'%(manga.type,manga.author,manga.name),e,'%s.mobi'%mPage.name)
                         logging.info("end upload %s mobi"%manga.name)
 
                     logging.info("end cloud")
