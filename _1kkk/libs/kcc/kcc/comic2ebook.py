@@ -1002,7 +1002,7 @@ def checkTools(source):
             print('ERROR: 7za is missing!')
             exit(1)
     if options.format == 'MOBI':
-        kindleGenExitCode = Popen('%s -locale en'%kindlegenpath, stdout=PIPE, stderr=STDOUT, stdin=PIPE, shell=True)
+        kindleGenExitCode = Popen('%s -locale en'%kindlegenpath, stdout=PIPE, stderr=STDOUT, stdin=PIPE, shell=True,close_fds=True)
         if kindleGenExitCode.wait() != 0:
             print('ERROR: KindleGen is missing!')
             exit(1)
