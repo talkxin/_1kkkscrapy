@@ -92,7 +92,7 @@ class downloadImage(threading.Thread):
             self.pcs = PCS(self.user.baiduname,self.user.baidupass)
         
         #三部漫画同时处理
-        self.executor = ThreadPoolExecutor(max_workers=3)
+        self.executor = ThreadPoolExecutor(max_workers=2)
         self.tq=[]
         
         #是否退出
