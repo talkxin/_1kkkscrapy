@@ -113,6 +113,8 @@ class downloadImage(threading.Thread):
     
 
     def initManga(self,items):
+        logging.info("===============================")
+        logging.info(len(items.ci))
         manga=items
         for ci in manga.ci:
             mPage=MangaPage()
