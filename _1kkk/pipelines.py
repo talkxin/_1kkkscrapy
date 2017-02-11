@@ -123,7 +123,6 @@ class downloadImage(threading.Thread):
     
 
     def initManga(self,items):
-        logging.info("===============================")
         manga=items
         ci=manga.ci
         mPage=self.db.getMangaPageByKkkid(manga.ci.id)
@@ -136,6 +135,7 @@ class downloadImage(threading.Thread):
         try:
             #生成epub
             mPage.size=self.createEpub(manga,ci,filepath)
+            logging.info("===============================")
         except Exception as e:
             #出现错误，回滚
             return
