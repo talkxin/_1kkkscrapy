@@ -574,7 +574,7 @@ class MangaDao:
             ci=Chapter()
             ci.chid=i[10]
             ci.id=i[11]
-            manga.ci=[ci]
+            manga.ci=ci
             items.append(manga)
         conn.close()
         return items
