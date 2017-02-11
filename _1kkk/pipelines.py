@@ -127,11 +127,15 @@ class downloadImage(threading.Thread):
                 #删除数据库条目，尝试再次下载
                 self.db.deleteMangaPageBykkkid(mPage)
                 return
-            #生成epub
-            mPage.size=self.createEpub(manga,ci,filepath)
+            try:
+                #生成epub
+                mPage.size=self.createEpub(manga,ci,filepath)
             
-            # 注册该漫画已生成mobi,入库
-            self.db.insertMangaPage(mPage)
+                # 注册该漫画已生成mobi,入库
+                self.db.insertMangaPage(mPage)
+            except Exception as e:
+                #出现错误，回滚
+                return
             
             #获取该漫画的推送活保存权限
             man=self.db.getMangaByKkkid(manga.kkkid)
