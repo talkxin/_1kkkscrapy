@@ -146,7 +146,7 @@ class ManSpider(scrapy.Spider):
 #                    yield self.items[response.meta['id']]['item']
         for o in as_completed(queue):
             if o.result()>=int(len):
-                self.items[response.meta['id']]['item']['chapter']=[self.chids[ci.id]]
+                self.items[response.meta['id']]['item']['chapter']=self.chids[ci.id]
                 yield self.items[response.meta['id']]['item']
 
     """
