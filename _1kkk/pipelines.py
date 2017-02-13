@@ -138,6 +138,7 @@ class downloadImage(threading.Thread):
             logging.info("===============================")
         except Exception as e:
             #出现错误，回滚
+            logging.warning(str(e))
             return
         
         #获取该漫画的推送活保存权限
