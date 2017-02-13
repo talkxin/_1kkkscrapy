@@ -139,6 +139,10 @@ class downloadImage(threading.Thread):
         except Exception as e:
             #出现错误，回滚
             logging.warning(str(e))
+            #删除目录
+            shutil.rmtree(filepath)
+            #删除数据库条目，尝试再次下载
+            self.db.deleteMangaPageBykkkid(mPage)
             return
         
         #获取该漫画的推送活保存权限
