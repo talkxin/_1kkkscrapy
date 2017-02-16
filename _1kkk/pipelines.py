@@ -143,6 +143,7 @@ class downloadImage(threading.Thread):
             mPage.size=self.createEpub(manga,ci,filepath)
             logging.info("===============================")
         except Exception as e:
+            logging.info(filepath)
             #出现错误，回滚
             logging.warning(str(e))
             #删除目录
