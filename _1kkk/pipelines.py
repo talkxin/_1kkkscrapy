@@ -38,7 +38,8 @@ class KkkPipeline(object):
         for i in self.db.getNotBackupManga():
             self.man.put(i)
         #优先处理未解决的漫画
-        while self.man.getSize()!=0:
+        while len(self.db.getNotBackupManga())!=0:
+            time.sleep(5)
             continue
 
 
@@ -117,17 +118,13 @@ class downloadImage(threading.Thread):
     def put(self,items):
         self.tq.append(self.executor.submit(self.initManga,items))
 
-    def getSize(self):
-        return len(self.tq)
-
     def close(self):
         self.closeKey=False
 
     def run(self):
         while self.closeKey:
             for k,v in enumerate(as_completed(self.tq)):
-                if o.result():
-                    del self.tq[k]
+                o.result()
 
 
     def initManga(self,items):
