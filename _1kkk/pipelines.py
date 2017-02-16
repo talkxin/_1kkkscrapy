@@ -28,16 +28,20 @@ from concurrent.futures import as_completed
 
 
 class KkkPipeline(object):
-    
+
     def open_spider(self, spider):
         #初始化队列文件
         self.man=downloadImage()
         self.man.start()
         self.db=MangaDao()
+        time.sleep(10)
         for i in self.db.getNotBackupManga():
             self.man.put(i)
-    
-    
+        #优先处理未解决的漫画
+        while self.man.getSize()!=0:
+            continue
+
+
     def close_spider(self, spider):
         self.man.close()
 
@@ -85,7 +89,7 @@ class downloadImage(threading.Thread):
         self.db=MangaDao()
         #默认读取首位用户
         self.user=self.db.getUserbyID(1)
-        
+
         try:
             self.smtp = smtplib.SMTP()
             self.smtp.connect(self.user.sendMail_smtp)
@@ -100,27 +104,31 @@ class downloadImage(threading.Thread):
         while json.loads(self.pcs.quota().content.decode())['errno']==-6:
             time.sleep(3)
             self.pcs = PCS(self.user.baiduname,self.user.baidupass)
-        
+
         #三部漫画同时处理
         self.executor = ThreadPoolExecutor(max_workers=2)
         self.tq=[]
-        
+
         #是否退出
         self.closeKey=True
-        
+
         super().__init__()
-    
+
     def put(self,items):
         self.tq.append(self.executor.submit(self.initManga,items))
-    
+
+    def getSize(self):
+        return len(self.tq)
+
     def close(self):
         self.closeKey=False
-    
+
     def run(self):
         while self.closeKey:
-            for o in as_completed(self.tq):
-                o.result()
-    
+            for k,v in enumerate(as_completed(self.tq)):
+                if o.result():
+                    del self.tq[k]
+
 
     def initManga(self,items):
         manga=items
@@ -144,7 +152,7 @@ class downloadImage(threading.Thread):
             #删除数据库条目，尝试再次下载
             self.db.deleteMangaPageBykkkid(mPage)
             return
-        
+
         #获取该漫画的推送活保存权限
         man=self.db.getMangaByKkkid(manga.kkkid)
         epubpath="./tmp/image/%s/%s"%(manga.id,ci.id)
@@ -191,7 +199,7 @@ class downloadImage(threading.Thread):
                     ret = self.pcs.upload('/manga/[%s][%s]%s/zip'%(manga.type,manga.author,manga.name),e,'%s.zip'%mPage.name)
                     logging.info("end upload %s zip"%manga.name)
                     mPage.isbuckup=1
-        
+
                 with open("%s.mobi"%epubpath, 'rb') as e:
                     #向云盘备份mobi
                     logging.info("start upload %s mobi"%manga.name)
@@ -347,7 +355,7 @@ class MangaDao:
         conn.execute("insert into manga values(null,'%s','%s',%s,'%s','%s','%s',%s,%s)"%(manga.kkkid,manga.pageurl,manga.name,manga.state,manga.type,manga.author,manga.time,manga.isbuckup,manga.ispush))
         conn.commit()
         conn.close()
-    
+
     def insertMangaUrl(self,url):
         conn=sqlite3.connect('./manga.db')
         conn.execute("insert into manga('pageurl') values('%s')"%url)
@@ -485,7 +493,7 @@ class MangaDao:
         conn.execute("delete from mangapage where manid=%d"%mangapage.manid)
         conn.commit()
         conn.close()
-    
+
     def deleteMangaPageBykkkid(self,mangapage):
         conn=sqlite3.connect('./manga.db')
         conn.execute("delete from mangapage where kkkid=%s"%mangapage.kkkid)
