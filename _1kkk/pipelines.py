@@ -124,7 +124,8 @@ class downloadImage(threading.Thread):
     def run(self):
         while self.closeKey:
             for k,v in enumerate(as_completed(self.tq)):
-                o.result()
+                if v.result():
+                    del self.tq[k]
 
 
     def initManga(self,items):
