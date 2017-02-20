@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 
 class ManSpider(scrapy.Spider):
-    
+
     global phantomjspath
     executor = ThreadPoolExecutor(max_workers=5)
     name="manhua"
@@ -40,9 +40,9 @@ class ManSpider(scrapy.Spider):
         获取数据库中所有需要爬取的漫画
     """
     for i in dao.getMangas():
-        #判断该漫画是否在连载中
-        if i.state==None or int(i.state)==1:
-            start_urls.append(i.pageurl)
+        # #判断该漫画是否在连载中
+        # if i.state==None or int(i.state)==1:
+        start_urls.append(i.pageurl)
     #所有的漫画
     items={}
     #所有的章节
@@ -164,7 +164,7 @@ class ManSpider(scrapy.Spider):
                 os.makedirs(filepath)
         except Exception as e:
             logging.warning(str(e))
-        
+
 #        if len(ci.page)<length:
         rp.id=pagesize
         rp.imageurl=self.getImgUrl(furl,purl,'%s/%s.jpg'%(filepath,rp.id))

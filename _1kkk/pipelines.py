@@ -568,7 +568,7 @@ class MangaDao:
 
     def getNotBackupManga(self):
         conn=sqlite3.connect('./manga.db')
-        cursor=conn.execute("select t2.*,t1.name,t1.kkkid from mangapage as t1 left join manga as t2 on t2.id=t1.manid where t2.isbuckup=0  and t1.isbuckup=1")
+        cursor=conn.execute("select t2.*,t1.name,t1.kkkid from mangapage as t1 left join manga as t2 on t2.id=t1.manid where t2.isbuckup=0 and t1.isbuckup=1")
         items=[]
         data=cursor.fetchall()
         for i in data:
