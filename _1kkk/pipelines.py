@@ -38,8 +38,6 @@ class KkkPipeline(object):
         for i in self.db.getNotBackupManga():
             self.man.put(i)
         #优先处理未解决的漫画
-        logging.info("==============================")
-        logging.info(len(self.db.getNotBackupManga()))
         while len(self.db.getNotBackupManga())!=0:
             time.sleep(5)
             continue
