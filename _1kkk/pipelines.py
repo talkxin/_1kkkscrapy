@@ -127,7 +127,7 @@ class downloadImage(threading.Thread):
                 if v.result():
                     del self.tq[k]
         #删除缓存目录
-        shutil.rmtree("./tmp/")
+        # shutil.rmtree("./tmp/")
 
 
     def initManga(self,items):
