@@ -48,6 +48,64 @@ class ManSpider(scrapy.Spider):
     #所有的章节
     chids={}
     def parse(self, response):
+        operator = {"http://www.1kkk.com/":self._1kkk_parse,"http://www.cartoonmad.com/":self._cartoonmad_parse}
+        url=response.urljoin("/")
+        return operator.get(url)(response)
+
+    def _cartoonmad_parse(self,response):
+        item=KkkItem()
+        stats=response.xpath("//table[@style='font-size:11pt;']/tr/td")
+        item['id']=response.url[response.url.rfind("/")+1:response.url.rfind(".")]
+        item['url']=response.url
+        name=response.xpath("//title/text()").extract()[0]
+        item['name']=name[:name.find("-")-1]
+        item['state']=1
+        item['time']="1970-01-01"
+        if stats[6]!=None:
+            str=stats[6].xpath('./text()').extract()[0]
+            item['author']=str[str.find("：")+1:].strip()
+        else:
+            item['author']="null"
+        if stats[4]!=None and len(stats[4].xpath("a/text()").extract())!=0:
+            item['type']=stats[4].xpath("a/text()").extract()[0]
+        else:
+            item['type']="null"
+        huasz=response.xpath("//table[@width='688']/tr/td/a")
+        self.items[item['id']]={'item':item,'hualength':len(huasz)}
+        for hua in huasz:
+            ci=Chapter()
+            ci.chid=hua.xpath("text()").extract()[0].replace(" ","")
+            href=hua.xpath("@href").extract()[0]
+            url =response.urljoin(href)
+            ci.id=href[href.rfind("/")+1:href.rfind(".")]
+            """
+                过滤数据库中所有已经下载过的漫画
+            """
+            if self.dao.getMangaPageByKkkid(ci.id)==None:
+                yield Request(url,meta={'id': item['id'],'chid':ci,'href':href}, callback=self._cartoonmad_parse_each_chapter)
+
+    def _cartoonmad_parse_each_chapter(self,response):
+        ci=response.meta['chid']
+        ci.page=[]
+        self.chids[ci.id]=ci
+        length=len(response.xpath("//select[@name='jump']/option/text()").extract())
+        url=response.xpath("//img[contains(@src,'cartoonmad.com')]/@src").extract()[0]
+        url=url[:url.rfind("/")+1]
+        # re1='.*?c(?:[a-z][a-z0-9_]*).*?(?:[a-z][a-z0-9_]*).*?(?:[a-z][a-z0-9_]*).*?(?:[a-z][a-z0-9_]*).*?((?:[a-z][a-z0-9_]*))'
+        # rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
+        # m = rg.search(url)
+        queue=[]
+        for i in range(1,length):
+            purl="%s/%0*d.jpg"%(url,3,i)
+            queue.append(self.executor.submit(self.parse_each_page,response.meta['id'],ci,length,i,purl,purl,2))
+        for o in as_completed(queue):
+            if o.result()>=int(length-1):
+                self.items[response.meta['id']]['item']['chapter']=self.chids[ci.id]
+                yield self.items[response.meta['id']]['item']
+
+
+
+    def _1kkk_parse(self,response):
         re1='.*?'   # Non-greedy match on filler
         re2='\\d+'  # Uninteresting: int
         re3='.*?'   # Non-greedy match on filler
@@ -121,7 +179,6 @@ class ManSpider(scrapy.Spider):
             if self.dao.getMangaPageByKkkid(ci.id)==None:
                 yield Request(url,meta={'id': item['id'],'chid':ci,'href':href}, callback=self.parse_each_chapter)
 
-
     def parse_each_chapter(self, response):
         ci=response.meta['chid']
         ci.page=[]
@@ -135,15 +192,11 @@ class ManSpider(scrapy.Spider):
             if i!=1:
                 furl=str(response.url)[:-1]+"-p"+str(i)
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page="+str(i)+"&key=&maxcount=10"
-                queue.append(self.executor.submit(self.parse_each_page,response.meta['id'],ci,int(len)-1,i,furl,purl))
-#                if not self.parse_each_page(response.meta['id'],ci,int(len)-1,i,furl,purl):
-#                    yield self.items[response.meta['id']]['item']
+                queue.append(self.executor.submit(self.parse_each_page,response.meta['id'],ci,int(len)-1,i,furl,purl,1))
             else:
                 furl=response.url
                 purl="http://www.1kkk.com/"+identifies+"-"+id+"/imagefun.ashx?cid="+id+"&page=1&key=&maxcount=10"
-                queue.append(self.executor.submit(self.parse_each_page,response.meta['id'],ci,int(len)-1,1,furl,purl))
-#                if not self.parse_each_page(response.meta['id'],ci,int(len)-1,1,furl,purl):
-#                    yield self.items[response.meta['id']]['item']
+                queue.append(self.executor.submit(self.parse_each_page,response.meta['id'],ci,int(len)-1,1,furl,purl,1))
         for o in as_completed(queue):
             if o.result()>=int(len):
                 self.items[response.meta['id']]['item']['chapter']=self.chids[ci.id]
@@ -151,10 +204,8 @@ class ManSpider(scrapy.Spider):
 
     """
         获取所有页面的js数据，并开始对js数据进行处理
-        若出现超时或报错，则对父页面进行重新拉取刷新，并暂停3秒钟再次尝试拉取
-        每个页面尝试3次，超过3次的均返回为空
     """
-    def parse_each_page(self,id,ci,length,pagesize,furl,purl):
+    def parse_each_page(self,id,ci,length,pagesize,furl,purl,type):
         item=self.items[id]
         manga=self.dao.getMangaByUrl(item['item']['url'])
         rp=Page()
@@ -164,20 +215,16 @@ class ManSpider(scrapy.Spider):
                 os.makedirs(filepath)
         except Exception as e:
             logging.warning(str(e))
-
-#        if len(ci.page)<length:
+        operator = {1:self._kkk_getImgUrl,2:self._cartoonmad_getImgUrl}
         rp.id=pagesize
-        rp.imageurl=self.getImgUrl(furl,purl,'%s/%s.jpg'%(filepath,rp.id))
+        rp.imageurl=operator.get(type)(furl,purl,'%s/%s.jpg'%(filepath,rp.id))
         self.chids[ci.id].page.append(rp)
         return len(self.chids[ci.id].page)
-#        else:
-#            page.id=pagesize
-#            page.imageurl=self.getImgUrl(furl,purl,'%s/%s.jpg'%(filepath,page.id))
-#            self.chids[ci.id].page.append(page)
-#            item['item']['chapter']=[self.chids[ci.id]]
-#            return False
 
-    def getImgUrl(self,furl,jsurl,path):
+    '''
+        获取极速漫画图片
+    '''
+    def _kkk_getImgUrl(self,furl,jsurl,path):
         try:
             if os.path.exists(path):
                 return path
@@ -195,6 +242,17 @@ class ManSpider(scrapy.Spider):
             logging.warning(str(e))
             time.sleep(3)
             self.getImgUrl(furl,jsurl,path)
+
+    '''
+        获取动漫狂图片
+    '''
+    def _cartoonmad_getImgUrl(self,furl,jsurl,path):
+        if os.path.exists(path):
+            return path
+        r = requests.get(jsurl)
+        with open(path, 'wb') as f:
+            f.write(r.content)
+        return path
 
     def verify(self,num):
         try:
