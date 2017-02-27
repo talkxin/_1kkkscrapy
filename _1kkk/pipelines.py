@@ -145,7 +145,6 @@ class downloadImage(threading.Thread):
             mPage.size=self.createEpub(manga,ci,filepath)
             logging.info("===============================")
         except Exception as e:
-            logging.info(filepath)
             #出现错误，回滚
             logging.error(str(e))
             #删除目录
@@ -160,6 +159,7 @@ class downloadImage(threading.Thread):
         try:
             if man.ispush==1:
                 #开始发送邮件
+                logging.info("into mail %s"%manga.name)
                 msgRoot = MIMEMultipart('related')
                 msgRoot['Subject'] = "%s[%s][%s][%s]"%(manga.name,ci.chid,manga.author,manga.type)
                 msgRoot['From']=self.user.sendMail
@@ -188,24 +188,25 @@ class downloadImage(threading.Thread):
                         os.remove("%s.txt"%epubpath)
                         #修改属性
                         self.db.updateMangaPageBykkkid(mPage)
+                logging.info("end mail")
         except Exception as e:
             logging.warning(str(e))
 
         try:
             if man.isbuckup==1:
-                logging.info("into cloud")
+                logging.info("into cloud %s"%manga.name)
                 with open("%s.zip"%epubpath, 'rb') as e:
                     #向云盘备份图片源文件打包zip
-                    logging.info("start upload %s zip"%manga.name)
+                    # logging.info("start upload %s zip"%manga.name)
                     ret = self.pcs.upload('/manga/[%s][%s]%s/zip'%(manga.type,manga.author,manga.name),e,'%s.zip'%mPage.name)
-                    logging.info("end upload %s zip"%manga.name)
+                    # logging.info("end upload %s zip"%manga.name)
                     mPage.isbuckup=1
 
                 with open("%s.mobi"%epubpath, 'rb') as e:
                     #向云盘备份mobi
-                    logging.info("start upload %s mobi"%manga.name)
+                    # logging.info("start upload %s mobi"%manga.name)
                     ret = self.pcs.upload('/manga/[%s][%s]%s/mobi'%(manga.type,manga.author,manga.name),e,'%s.mobi'%mPage.name)
-                    logging.info("end upload %s mobi"%manga.name)
+                    # logging.info("end upload %s mobi"%manga.name)
 
                 logging.info("end cloud")
             # 删除缓存文件
