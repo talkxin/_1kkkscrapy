@@ -249,6 +249,7 @@ class ManSpider(scrapy.Spider):
     def _cartoonmad_getImgUrl(self,furl,jsurl,path):
         if os.path.exists(path):
             return path
+        time.sleep(5)
         r = requests.get(jsurl)
         with open(path, 'wb') as f:
             f.write(r.content)
