@@ -139,7 +139,7 @@ class downloadImage(threading.Thread):
         if not os.path.exists(filepath):
             #删除数据库条目，尝试再次下载
             self.db.deleteMangaPageBykkkid(mPage)
-            return TRUE
+            return True
         try:
             #生成epub
             mPage.size=self.createEpub(manga,ci,filepath)
@@ -151,7 +151,7 @@ class downloadImage(threading.Thread):
             shutil.rmtree(filepath)
             #删除数据库条目，尝试再次下载
             self.db.deleteMangaPageBykkkid(mPage)
-            return TRUE
+            return True
 
         #获取该漫画的推送活保存权限
         man=self.db.getMangaByKkkid(manga.kkkid)
@@ -221,7 +221,7 @@ class downloadImage(threading.Thread):
             logging.info("cloud error")
             logging.warning(str(e))
 
-        return TRUE
+        return True
 
     def createEpub(self,manga,ci,path):
         #路径
