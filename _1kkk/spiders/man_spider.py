@@ -99,9 +99,9 @@ class ManSpider(scrapy.Spider):
         # m = rg.search(url)
         queue=[]
         #上锁等待
-        if len(self.db.getNotBackupManga())>10:
+        if len(self.dao.getNotBackupManga())>10:
             self.mutex.acquire()
-            while len(self.db.getNotBackupManga())!=0:
+            while len(self.dao.getNotBackupManga())!=0:
                 time.sleep(10)
                 continue
             self.mutex.release()
@@ -198,9 +198,9 @@ class ManSpider(scrapy.Spider):
         identifies=href[1:href.find(id)-1]
         queue=[]
         #上锁等待
-        if len(self.db.getNotBackupManga())>10:
+        if len(self.dao.getNotBackupManga())>10:
             self.mutex.acquire()
-            while len(self.db.getNotBackupManga())!=0:
+            while len(self.dao.getNotBackupManga())!=0:
                 time.sleep(10)
                 continue
             self.mutex.release()
