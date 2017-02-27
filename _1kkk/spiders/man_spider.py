@@ -211,7 +211,7 @@ class ManSpider(scrapy.Spider):
         rp=Page()
         filepath="./tmp/image/%s/%s/"%(manga.id,ci.id)
         try:
-            if not os.path.exists(filepath):
+            if not os.path.isdir(filepath):
                 os.makedirs(filepath)
         except Exception as e:
             logging.warning(str(e))
