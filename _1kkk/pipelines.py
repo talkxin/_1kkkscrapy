@@ -603,3 +603,9 @@ class MangaDao:
             items.append(manga)
         conn.close()
         return items
+
+    def getNotBackupMangaByCount(self):
+        conn=sqlite3.connect('./manga.db')
+        cursor=conn.execute("select count(*) as size from mangapage as t1 left join manga as t2 on t1.manid=t2.id where t2.isbuckup=1 and t1.isbuckup=0")
+        data=cursor.fetchall()
+        return int(data[0][0])
