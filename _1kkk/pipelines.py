@@ -226,6 +226,10 @@ class downloadImage(threading.Thread):
     def createEpub(self,manga,ci,path):
         #路径
         epubpath="./tmp/image/%s/%s"%(manga.id,ci.id)
+        #删除冗余数据
+        os.remove("%s.epub"%epubpath)
+        os.remove("%s.mobi"%epubpath)
+        os.remove("%s.zip"%epubpath)
         title="%s[%s][%s][%s]"%(manga.name,ci.chid,manga.author,manga.type)
         createKVBook(path,"%s.epub"%epubpath,title)
         #删除epub
