@@ -139,19 +139,19 @@ class downloadImage(threading.Thread):
         if not os.path.exists(filepath):
             #删除数据库条目，尝试再次下载
             self.db.deleteMangaPageBykkkid(mPage)
-            return
+            return TRUE
         try:
             #生成epub
             mPage.size=self.createEpub(manga,ci,filepath)
-            logging.info("===============================")
         except Exception as e:
+            logging.info("mobi error")
             #出现错误，回滚
             logging.error(str(e))
             #删除目录
             shutil.rmtree(filepath)
             #删除数据库条目，尝试再次下载
             self.db.deleteMangaPageBykkkid(mPage)
-            return
+            return TRUE
 
         #获取该漫画的推送活保存权限
         man=self.db.getMangaByKkkid(manga.kkkid)
@@ -190,6 +190,7 @@ class downloadImage(threading.Thread):
                         self.db.updateMangaPageBykkkid(mPage)
                 logging.info("end mail")
         except Exception as e:
+            logging.info("mail error")
             logging.warning(str(e))
 
         try:
@@ -217,8 +218,10 @@ class downloadImage(threading.Thread):
             #修改属性
             self.db.updateMangaPageBykkkid(mPage)
         except Exception as e:
+            logging.info("cloud error")
             logging.warning(str(e))
 
+        return TRUE
 
     def createEpub(self,manga,ci,path):
         #路径
