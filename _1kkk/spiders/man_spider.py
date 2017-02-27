@@ -16,6 +16,7 @@ import os
 import os.path
 import time
 import logging
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 
@@ -23,6 +24,8 @@ class ManSpider(scrapy.Spider):
 
     global phantomjspath
     executor = ThreadPoolExecutor(max_workers=5)
+    #创建锁
+    mutex = threading.Lock()
     name="manhua"
     start_urls=[]
     dao=MangaDao()
@@ -95,6 +98,13 @@ class ManSpider(scrapy.Spider):
         # rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
         # m = rg.search(url)
         queue=[]
+        #上锁等待
+        if len(self.db.getNotBackupManga())>10:
+            self.mutex.acquire()
+            while len(self.db.getNotBackupManga())!=0:
+                time.sleep(10)
+                continue
+            self.mutex.release()
         for i in range(1,length):
             purl="%s/%0*d.jpg"%(url,3,i)
             queue.append(self.executor.submit(self.parse_each_page,response.meta['id'],ci,length,i,purl,purl,2))
@@ -102,7 +112,6 @@ class ManSpider(scrapy.Spider):
             if o.result()>=int(length-1):
                 self.items[response.meta['id']]['item']['chapter']=self.chids[ci.id]
                 yield self.items[response.meta['id']]['item']
-
 
 
     def _1kkk_parse(self,response):
@@ -188,6 +197,13 @@ class ManSpider(scrapy.Spider):
         id=href.split('-')[-1][:-1]
         identifies=href[1:href.find(id)-1]
         queue=[]
+        #上锁等待
+        if len(self.db.getNotBackupManga())>10:
+            self.mutex.acquire()
+            while len(self.db.getNotBackupManga())!=0:
+                time.sleep(10)
+                continue
+            self.mutex.release()
         for i in range(1,int(len)+1):
             if i!=1:
                 furl=str(response.url)[:-1]+"-p"+str(i)
@@ -260,3 +276,11 @@ class ManSpider(scrapy.Spider):
             return (False, True)[round(float(num)) == float(num)]
         except Exception as e:
             return False
+    '''
+        检查文件夹大小
+    '''
+    def getdirsize(dir):
+        size = 0
+        for root, dirs, files in os.walk(dir):
+            size += sum([os.path.getsize(os.path.join(root, name)) for name in files])
+        return size
