@@ -199,12 +199,12 @@ class ManSpider(scrapy.Spider):
         queue=[]
         #上锁等待
         if self.dao.getNotBackupMangaByCount()>10:
-            self.mutex.acquire()
-            logging.info("开始锁定")
-            while self.dao.getNotBackupMangaByCount()!=0:
-                time.sleep(10)
-                continue
-            self.mutex.release()
+            # self.mutex.acquire()
+            # logging.info("开始锁定")
+            # while self.dao.getNotBackupMangaByCount()!=0:
+            #     time.sleep(10)
+            #     continue
+            # self.mutex.release()
         for i in range(1,int(len)+1):
             if i!=1:
                 furl=str(response.url)[:-1]+"-p"+str(i)
