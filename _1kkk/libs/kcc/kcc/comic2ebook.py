@@ -38,6 +38,7 @@ from PIL import Image
 from subprocess import STDOUT, PIPE
 from psutil import Popen, virtual_memory
 from html import escape
+import logging
 import platform
 try:
     from PyQt5 import QtCore
@@ -70,14 +71,14 @@ def main(argv=None):
     else:
         sources = set(args)
     if len(sources) == 0:
-        print('No matching files found.')
+        logging.info('No matching files found.')
         return 1
     for source in sources:
         source = source.rstrip('\\').rstrip('/')
         options = copy(optionstemplate)
         checkOptions()
         if len(sources) > 1:
-            print('Working on ' + source + '...')
+            logging.info('Working on ' + source + '...')
         makeBook(source)
     return 0
 
@@ -833,7 +834,7 @@ def detectCorruption(tmpPath, orgPath):
             else:
                 saferRemove(os.path.join(root, name))
     if imageSmaller > imageNumber * 0.25 and not options.upscale and not options.stretch:
-        print("WARNING: More than 1/4 of images are smaller than target device resolution. "
+        logging.info("WARNING: More than 1/4 of images are smaller than target device resolution. "
               "Consider enabling stretching or upscaling to improve readability.")
         if GUI:
             GUI.addMessage.emit('More than 1/4 of images are smaller than target device resolution.', 'warning', False)
@@ -993,18 +994,18 @@ def checkTools(source):
         rarExitCode = Popen('unrar', stdout=PIPE, stderr=STDOUT, stdin=PIPE, shell=True)
         rarExitCode = rarExitCode.wait()
         if rarExitCode != 0 and rarExitCode != 7:
-            print('ERROR: UnRAR is missing!')
+            logging.info('ERROR: UnRAR is missing!')
             exit(1)
     elif source.endswith('.CB7') or source.endswith('.7Z'):
         sevenzaExitCode = Popen('7za', stdout=PIPE, stderr=STDOUT, stdin=PIPE, shell=True)
         sevenzaExitCode = sevenzaExitCode.wait()
         if sevenzaExitCode != 0 and sevenzaExitCode != 7:
-            print('ERROR: 7za is missing!')
+            logging.info('ERROR: 7za is missing!')
             exit(1)
     if options.format == 'MOBI':
         kindleGenExitCode = Popen('%s -locale en'%kindlegenpath, stdout=PIPE, stderr=STDOUT, stdin=PIPE, shell=True)
         if kindleGenExitCode.wait() != 0:
-            print('ERROR: KindleGen is missing!')
+            logging.info('ERROR: KindleGen is missing!')
             exit(1)
 
 
@@ -1034,9 +1035,9 @@ def makeBook(source, qtGUI=None):
     else:
         checkTools(source)
     checkPre(source)
-    print("Preparing source images...")
+    logging.info("Preparing source images...")
     path = getWorkFolder(source)
-    print("Checking images...")
+    logging.info("Checking images...")
     getComicInfo(os.path.join(path, "OEBPS", "Images"), source)
     detectCorruption(os.path.join(path, "OEBPS", "Images"), source)
     if options.webtoon:
@@ -1045,7 +1046,7 @@ def makeBook(source, qtGUI=None):
         else:
             y = image.ProfileData.Profiles[options.profile][1][1]
         comic2panel.main(['-y ' + str(y), '-i', '-m', path], qtGUI)
-    print("Processing images...")
+    logging.info("Processing images...")
     if GUI:
         GUI.progressBarTick.emit('Processing images')
     imgDirectoryProcessing(os.path.join(path, "OEBPS", "Images"))
@@ -1078,14 +1079,14 @@ def makeBook(source, qtGUI=None):
             tomeNumber += 1
             options.title = options.baseTitle + ' [' + str(tomeNumber) + '/' + str(len(tomes)) + ']'
         if options.format == 'CBZ':
-            print("Creating CBZ file...")
+            logging.info("Creating CBZ file...")
             if len(tomes) > 1:
                 filepath.append(getOutputFilename(source, options.output, '.cbz', ' ' + str(tomeNumber)))
             else:
                 filepath.append(getOutputFilename(source, options.output, '.cbz', ''))
             makeZIP(tome + '_comic', os.path.join(tome, "OEBPS", "Images"))
         else:
-            print("Creating EPUB file...")
+            logging.info("Creating EPUB file...")
             buildEPUB(tome, chapterNames, tomeNumber)
             if len(tomes) > 1:
                 filepath.append(getOutputFilename(source, options.output, '.epub', ' ' + str(tomeNumber)))
@@ -1097,23 +1098,23 @@ def makeBook(source, qtGUI=None):
         if GUI:
             GUI.progressBarTick.emit('tick')
     if not GUI and options.format == 'MOBI':
-        print("Creating MOBI files...")
+        logging.info("Creating MOBI files...")
         work = []
         for i in filepath:
             work.append([i])
         output = makeMOBI(work, GUI)
         for errors in output:
             if errors[0] != 0:
-                print('Error: KindleGen failed to create MOBI!')
-                print(errors)
+                logging.info('Error: KindleGen failed to create MOBI!')
+                logging.info(errors)
                 return filepath
         k = kindle.Kindle()
         if k.path and k.coverSupport:
-            print("Kindle detected. Uploading covers...")
+            logging.info("Kindle detected. Uploading covers...")
 #        for i in filepath:
 #            output = makeMOBIFix(i, options.covers[filepath.index(i)][1])
 #            if not output[0]:
-#                print('Error: Failed to tweak KindleGen output!')
+#                logging.info('Error: Failed to tweak KindleGen output!')
 #                return filepath
 #            else:
 #                saferRemove(i.replace('.epub', '.mobi') + '_toclean')
