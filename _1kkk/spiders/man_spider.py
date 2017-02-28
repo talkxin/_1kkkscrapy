@@ -200,6 +200,7 @@ class ManSpider(scrapy.Spider):
         #上锁等待
         if self.dao.getNotBackupMangaByCount()>10:
             self.mutex.acquire()
+            logging.info("开始锁定")
             while self.dao.getNotBackupMangaByCount()!=0:
                 time.sleep(10)
                 continue
