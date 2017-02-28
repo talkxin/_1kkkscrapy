@@ -52,7 +52,7 @@ class ManSpider(scrapy.Spider):
     def parse(self, response):
         operator = {"http://www.1kkk.com/":self._1kkk_parse,"http://www.cartoonmad.com/":self._cartoonmad_parse}
         url=response.urljoin("/")
-        # return operator.get(url)(response)
+        return operator.get(url)(response)
 
     def _cartoonmad_parse(self,response):
         item=KkkItem()
@@ -236,8 +236,8 @@ class ManSpider(scrapy.Spider):
     '''
     def _kkk_getImgUrl(self,furl,jsurl,path):
         try:
-            # logging.info("!!!!!!!!!!!!!!!")
-            # logging.info(KkkPipeline.man.getQueueSize())
+            logging.info("!!!!!!!!!!!!!!!")
+            logging.info(KkkPipeline.man.getQueueSize())
             if os.path.exists(path):
                 return path
             requests.get(furl)
