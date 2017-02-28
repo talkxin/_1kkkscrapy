@@ -31,12 +31,12 @@ class KkkPipeline(object):
     man=None
     def open_spider(self, spider):
         #初始化队列文件
-        self.man=downloadImage()
-        self.man.start()
+        KkkPipeline.man=downloadImage()
+        KkkPipeline.man.start()
         self.db=MangaDao()
         time.sleep(10)
         for i in self.db.getNotBackupManga():
-            self.man.put(i)
+            KkkPipeline.man.put(i)
         #优先处理未解决的漫画
         while len(self.db.getNotBackupManga())!=0:
             time.sleep(5)
@@ -44,7 +44,7 @@ class KkkPipeline(object):
 
 
     def close_spider(self, spider):
-        self.man.close()
+        KkkPipeline.man.close()
 
     """
         每个漫画创建一个下载线程进行下载
