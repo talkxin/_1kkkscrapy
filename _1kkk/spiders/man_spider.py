@@ -222,7 +222,10 @@ class ManSpider(scrapy.Spider):
         filepath="./tmp/image/%s/%s/"%(manga.id,ci.id)
         try:
             if not os.path.isdir(filepath):
+                #创建时增加锁，防止报错
+                self.mutex.acquire()
                 os.makedirs(filepath)
+                self.mutex.release()
         except Exception as e:
             logging.warning(str(e))
         operator = {1:self._kkk_getImgUrl,2:self._cartoonmad_getImgUrl}
