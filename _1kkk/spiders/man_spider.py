@@ -236,8 +236,8 @@ class ManSpider(scrapy.Spider):
     '''
     def _kkk_getImgUrl(self,furl,jsurl,path):
         try:
-            logging.info("!!!!!!!!!!!!!!!")
-            logging.info(KkkPipeline.man.getQueueSize())
+            # logging.info("!!!!!!!!!!!!!!!")
+            # logging.info(KkkPipeline.man.getQueueSize())
             if os.path.exists(path):
                 return path
             requests.get(furl)

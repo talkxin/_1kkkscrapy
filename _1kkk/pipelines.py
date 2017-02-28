@@ -112,7 +112,6 @@ class downloadImage(threading.Thread):
 
         #是否退出
         self.closeKey=True
-
         super().__init__()
 
     def put(self,items):
