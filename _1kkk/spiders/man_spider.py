@@ -7,6 +7,7 @@ from _1kkk.items import Chapter
 from _1kkk.items import Page
 from _1kkk.pipelines import MangaDao
 from _1kkk.pipelines import Manga
+from _1kkk.pipelines import KkkPipeline
 import copy
 import execjs
 import requests
@@ -21,8 +22,6 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 
 class ManSpider(scrapy.Spider):
-
-    global phantomjspath
     executor = ThreadPoolExecutor(max_workers=5)
     #创建锁
     mutex = threading.Lock()
@@ -53,7 +52,7 @@ class ManSpider(scrapy.Spider):
     def parse(self, response):
         operator = {"http://www.1kkk.com/":self._1kkk_parse,"http://www.cartoonmad.com/":self._cartoonmad_parse}
         url=response.urljoin("/")
-        return operator.get(url)(response)
+        # return operator.get(url)(response)
 
     def _cartoonmad_parse(self,response):
         item=KkkItem()
@@ -98,14 +97,6 @@ class ManSpider(scrapy.Spider):
         # rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
         # m = rg.search(url)
         queue=[]
-        #上锁等待
-        # if self.dao.getNotBackupMangaByCount()>10:
-        #     self.mutex.acquire()
-        #     logging.info("开始锁定")
-        #     while self.dao.getNotBackupMangaByCount()!=0:
-        #         time.sleep(10)
-        #         continue
-        #     self.mutex.release()
         for i in range(1,length):
             purl="%s/%0*d.jpg"%(url,3,i)
             queue.append(self.executor.submit(self.parse_each_page,response.meta['id'],ci,length,i,purl,purl,2))
@@ -224,6 +215,7 @@ class ManSpider(scrapy.Spider):
         获取所有页面的js数据，并开始对js数据进行处理
     """
     def parse_each_page(self,id,ci,length,pagesize,furl,purl,type):
+        # if getdirsize("./tmp")>=1024*1024*1024
         item=self.items[id]
         manga=self.dao.getMangaByUrl(item['item']['url'])
         rp=Page()
@@ -244,6 +236,8 @@ class ManSpider(scrapy.Spider):
     '''
     def _kkk_getImgUrl(self,furl,jsurl,path):
         try:
+            logging.info("!!!!!!!!!!!!!!!")
+            logging.info(KkkPipeline.man.getQueueSize())
             if os.path.exists(path):
                 return path
             requests.get(furl)
