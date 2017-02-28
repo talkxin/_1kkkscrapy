@@ -198,7 +198,7 @@ class ManSpider(scrapy.Spider):
         identifies=href[1:href.find(id)-1]
         queue=[]
         #上锁等待
-        if self.dao.getNotBackupMangaByCount()>10:
+        # if self.dao.getNotBackupMangaByCount()>10:
             # self.mutex.acquire()
             # logging.info("开始锁定")
             # while self.dao.getNotBackupMangaByCount()!=0:
