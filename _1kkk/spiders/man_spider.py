@@ -61,7 +61,7 @@ class ManSpider(scrapy.Spider):
         item['url']=response.url
         name=response.xpath("//title/text()").extract()[0]
         item['name']=name[:name.find("-")-1]
-        item['state']=1
+        item['state']="已完结"
         item['time']="1970-01-01"
         if stats[6]!=None:
             str=stats[6].xpath('./text()').extract()[0]
