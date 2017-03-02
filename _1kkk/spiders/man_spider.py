@@ -23,8 +23,6 @@ from concurrent.futures import as_completed
 
 class ManSpider(scrapy.Spider):
     executor = ThreadPoolExecutor(max_workers=5)
-    #创建锁
-    mutex = threading.Lock()
     name="manhua"
     start_urls=[]
     dao=MangaDao()
@@ -61,7 +59,7 @@ class ManSpider(scrapy.Spider):
         item['url']=response.url
         name=response.xpath("//title/text()").extract()[0]
         item['name']=name[:name.find("-")-1]
-        item['state']="已完结"
+        item['state']="连载中"
         item['time']="1970-01-01"
         if stats[6]!=None:
             str=stats[6].xpath('./text()').extract()[0]
@@ -223,11 +221,9 @@ class ManSpider(scrapy.Spider):
         try:
             if not os.path.isdir(filepath):
                 #创建时增加锁，防止报错
-                self.mutex.acquire()
                 os.makedirs(filepath)
-                self.mutex.release()
         except Exception as e:
-            logging.warning(str(e))
+            print(str(e))
         operator = {1:self._kkk_getImgUrl,2:self._cartoonmad_getImgUrl}
         rp.id=pagesize
         rp.imageurl=operator.get(type)(furl,purl,'%s/%s.jpg'%(filepath,rp.id))
