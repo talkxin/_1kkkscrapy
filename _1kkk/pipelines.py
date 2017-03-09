@@ -90,7 +90,6 @@ class downloadImage(threading.Thread):
         self.db=MangaDao()
         #默认读取首位用户
         self.user=self.db.getUserbyID(1)
-
         try:
             self.smtp = smtplib.SMTP()
             self.smtp.connect(self.user.sendMail_smtp)
@@ -178,7 +177,7 @@ class downloadImage(threading.Thread):
                 else:
                     file_object = open('%s.txt'%epubpath, 'w')
                     file_object.write("%s[%s][%s][%s] is too big,please open the baidu cloud,download this file"%(manga.name,ci.chid,manga.author,manga.type))
-                    file_object.close
+                    file_object.close()
                     with open("%s.txt"%epubpath, 'rb') as e:
                         att = MIMEText(e.read(), 'base64', 'utf-8')
                         att["Content-Type"] = 'application/octet-stream'
