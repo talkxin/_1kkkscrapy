@@ -4,7 +4,7 @@
 
 1、安装scrapy及所需的python库：
 	pip3 install pip PyExecJS pyasn1 cryptography python-slugify Pillow psutil selenium requests_toolbelt rsa scrapy --upgrade
-	
+
 2、下载项目：
 	git clone https://github.com/talkxin/_1kkkscrapy.git
 
@@ -26,3 +26,7 @@
     因为大多数邮件会因为群发邮件导致被加入黑名单无法推送，所以一般自建服务器或者使用其他邮件smtp服务最好，这里特指安装postfix服务器
     apt-get install -y postfix
     然后填写推送服务器的邮箱即可
+
+8、修改邮箱最大限额：
+		sudo postconf -e "message_size_limit = 102400000"
+		否则会报error: 552 5.3.4 Message size exceeds fixed limit
